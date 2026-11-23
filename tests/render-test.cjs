@@ -11,7 +11,7 @@ function boot(saved){
   const doc={querySelector:s=>els[s]??=mk(),querySelectorAll:()=>[],addEventListener:(t,f)=>{(handlers[t]??=[]).push(f)},createElement:()=>mk(),head:mk(),body:mk(),documentElement:mk()};
   Object.assign(win,{window:win,document:doc,localStorage:ls,location:win.location,history:win.history,console,Intl,Date,JSON,Math,crypto:require('node:crypto').webcrypto,setTimeout:()=>0,clearTimeout(){},Object,Array,String,Number,Map,Set,Error,Promise,URL,Blob:class{},CSS:{escape:s=>s},FormData:class{},TextEncoder,TextDecoder,navigator:{},requestAnimationFrame:f=>f()});
   vm.createContext(win);
-  for(const f of ['sheet-config.js','sheet-schema.js','sheet-sync.js','stats.js','charts.js','app.js'])vm.runInContext(fs.readFileSync(path.join(root,f),'utf8'),win,{filename:f});
+  for(const f of ['sheet-config.js','sheet-schema.js','sheet-sync.js','stats.js','charts.js','xlsx.js','app.js'])vm.runInContext(fs.readFileSync(path.join(root,f),'utf8'),win,{filename:f});
   return {html:()=>els['#app'].innerHTML,modal:()=>els['#modal-root'].innerHTML,store,
     change:(filter,value)=>{for(const h of handlers.change)h({target:{matches:q=>q==='[data-filter]',dataset:{filter},value}})},
     click:(action,dataset={})=>{const el={dataset:{action,...dataset},type:'button'};for(const h of handlers.click)h({target:{closest:()=>el,matches:()=>false}})}};

@@ -4,6 +4,27 @@ Website tĩnh HTML/CSS/JavaScript chạy trên GitHub Pages. Dữ liệu lịch 
 
 **Sau lần cập nhật cột STT:** Bảy tab hiện có cột `STT` ở A và ID/khóa chuyển sang B. Bản Apps Script đã triển khai trước đó sẽ báo `Sai tiêu đề tab Cài đặt` cho đến khi bạn dán lại [apps-script/Code.gs](./apps-script/Code.gs) và chọn **Triển khai → Quản lý các bản triển khai → Chỉnh sửa → Phiên bản mới → Triển khai**. Giữ nguyên URL `/exec` và tải lại website sau khi triển khai.
 
+## Tính năng chính
+
+- **Ngày cưới** có thể để trống; website hiển thị "Đang chọn ngày lành" và ẩn đếm ngược cho tới khi bạn chọn ngày.
+- **Ngân sách:** đặt tổng ngân sách mục tiêu (Cài đặt hoặc nút trong tab Ngân sách), thanh mức đã dùng và cảnh báo khi vượt; biểu đồ cơ cấu chi theo danh mục; so sánh dự trù và thực tế; lịch thanh toán (quá hạn, sắp đến hạn trong 14 ngày); bình quân mỗi khách và mỗi mâm; lọc theo trạng thái thanh toán và sắp xếp. "Dự kiến chi" của một khoản là giá thực tế nếu đã chốt, chưa có thì lấy dự trù.
+- **Khách mời:** thống kê cơ cấu xác nhận và theo nhóm, theo dõi thiệp đã gửi (bấm biểu tượng gửi, hoặc đánh dấu cả nhóm), bộ lọc thiệp mời, sắp xếp A-Z, cảnh báo khách trùng tên/số điện thoại và bàn vượt sức chứa, liên kết Gọi/Zalo từ số điện thoại.
+
+## Cấu trúc mã
+
+| Tệp | Vai trò |
+|---|---|
+| `index.html`, `styles.css` | Trang và giao diện |
+| `app.js` | Giao diện, trạng thái, xử lý thao tác |
+| `stats.js` | Thống kê ngân sách và khách mời (thuần, có test) |
+| `charts.js` | Biểu đồ SVG/HTML, không thư viện (thuần, có test) |
+| `xlsx.js` | Xuất/nhập Excel XLSX và CSV (có test) |
+| `sheet-schema.js`, `sheet-sync.js`, `sheet-config.js` | Sơ đồ dữ liệu và đồng bộ Google Sheets |
+| `apps-script/Code.gs` | Mã dán vào Apps Script |
+| `tests/` | Kiểm thử Node.js, chạy bằng `npm test` (không cần cài gói) |
+
+Mục tiêu ngân sách được lưu trong tab `Cài đặt` của Sheet (khóa `budgetTarget`), không đổi cấu trúc các tab; không cần cập nhật Apps Script cho tính năng này. `.github/workflows/test.yml` tự chạy bộ test mỗi khi đẩy mã lên GitHub.
+
 ## Đặt mật khẩu truy cập (bắt buộc)
 
 Apps Script từ chối mọi yêu cầu nếu chưa đặt mật khẩu. Mật khẩu không nằm trong mã GitHub.
@@ -43,6 +64,6 @@ Mã Apps Script cố định ID Sheet, chỉ cho phép bảy tab, kiểm tra c�
 
 ## Kiểm thử và sao lưu
 
-Chạy `node tests/schema-test.cjs`, `node tests/store-test.cjs` và `node tests/apps-script-test.cjs` để kiểm tra mã không cần tài khoản Google. Kiểm thử thật với Google Sheets chỉ thực hiện được sau khi bạn triển khai Apps Script và điền URL `/exec`.
+Chạy `npm test` (hoặc từng tệp trong `tests/` bằng `node`) để kiểm tra mã không cần tài khoản Google. `tests/render-test.cjs` dựng giao diện với DOM giả để bắt lỗi hiển thị, nhưng không thay thế việc thử trên trình duyệt thật. Kiểm thử thật với Google Sheets chỉ thực hiện được sau khi bạn triển khai Apps Script và điền URL `/exec`.
 
 Trong **Cài đặt**, bạn có thể xuất/khôi phục JSON và đặt lại dữ liệu. Các mục vẫn hỗ trợ xuất Excel/CSV; khách mời hỗ trợ nhập Excel/CSV. Khi sửa trực tiếp trong Sheet, giữ nguyên hàng tiêu đề và cột ID; ngày dùng `YYYY-MM-DD`, giờ `HH:MM`.
