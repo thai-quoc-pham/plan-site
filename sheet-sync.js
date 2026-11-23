@@ -18,6 +18,14 @@
     saveQueue(){try{root.localStorage?.setItem(QUEUE_KEY,JSON.stringify({pending:[...this.dirty],revisions:this.revisions}))}catch{}}
     key(){try{return root.localStorage?.getItem(PASS_KEY)||''}catch{return ''}}
     setKey(value){try{value?root.localStorage?.setItem(PASS_KEY,value):root.localStorage?.removeItem(PASS_KEY)}catch{}}
+    // Link riêng dạng https://.../#k=MẬT_KHẨU: lưu vào trình duyệt, phần sau # không gửi lên máy chủ.
+    adoptKeyFromHash(hash){
+      const match=/(?:^#|&)k=([^&]*)/.exec(String(hash||''));
+      if(!match)return false;
+      let value='';try{value=decodeURIComponent(match[1]).trim()}catch{return false}
+      if(!value)return false;
+      this.setKey(value);return true;
+    }
     configured(){return /^https:\/\/script\.google\.com\/macros\/s\/[^/?#]+\/exec$/.test(endpoint())}
     async fetchSnapshot(){
       if(!this.configured())throw Error('Chưa cấu hình URL Apps Script trong sheet-config.js.');
@@ -35,7 +43,7 @@
     async snapshot(fallback){
       const result=await this.fetchSnapshot();
       if(!result?.ok){
-        if(/^AUTH:/.test(result?.error||'')){this.setKey('');const e=Error('Sai mật khẩu. Hãy nhập lại.');e.auth=true;throw e}
+        if(/^AUTH:/.test(result?.error||'')){this.setKey('');const e=Error('Sai mật khẩu. Hãy mở lại link riêng có mật khẩu.');e.auth=true;throw e}
         throw Error(result?.error||'Apps Script trả về lỗi.');
       }
       const state=schema.parse(result.matrices,fallback);

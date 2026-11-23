@@ -506,11 +506,17 @@ function doQuick(groupId){
  g.guests.push(person);update();const again=$(`input[data-action="quick-guest"][data-group="${CSS.escape(groupId)}"]`);again?.focus();toast(`Đã thêm ${person.name}.`);
 }
 function removePrompt(thing){return window.confirm(`Bạn chắc chắn muốn xóa ${thing}? Hành động không thể hoàn tác (trừ khi đã sao lưu JSON).`)}
+function adoptLinkKey(){
+ if(!location.hash.includes('k='))return;
+ const ok=sheetStore.adoptKeyFromHash(location.hash);
+ try{history.replaceState(null,'',location.pathname+location.search)}catch{}
+ return ok;
+}
 async function startSheet(){
  if(!sheetStore.configured()){setSyncStatus('Chỉ lưu trên máy · Chưa triển khai Apps Script',true);return}
  const app=$('#app');app.inert=true;
  try{
-  if(!sheetStore.key()){const pw=window.prompt('Nhập mật khẩu để đồng bộ Google Sheets:');if(!pw){setSyncStatus('Cần mật khẩu để đồng bộ · Bấm thử lại',true);return}sheetStore.setKey(pw.trim())}
+  if(!sheetStore.key()){setSyncStatus('Cần mở link riêng có mật khẩu để đồng bộ Google Sheets',true);return}
   const remote=await sheetStore.connect(state);
   if(localStorage.getItem(MIGRATION_KEY)&&sheetStore.dirty.size){
    const matrices=SheetSchema.matrixFor(remote),localRows=SheetSchema.rowsFor(state);
@@ -622,5 +628,5 @@ document.addEventListener('dragover',ev=>{if(dragging&&ev.target.closest('.guest
 document.addEventListener('drop',ev=>{const target=ev.target.closest('.guest-group')?.dataset.group;if(!target||!dragging||target===dragging)return;ev.preventDefault();const old=state.guestGroups.findIndex(g=>g.id===dragging),to=state.guestGroups.findIndex(g=>g.id===target);if(old<0||to<0)return;state.guestGroups.splice(to,0,...state.guestGroups.splice(old,1));dragging=null;update()});
 document.addEventListener('dragend',()=>dragging=null);
 /* Khởi động, ghi v2 để không nạp lại dữ liệu mẫu đã xóa khi tải lại. */
-render();persist();startSheet();
+adoptLinkKey();render();persist();startSheet();
 })();

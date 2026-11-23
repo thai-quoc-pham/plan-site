@@ -11,7 +11,7 @@ Apps Script từ chối mọi yêu cầu nếu chưa đặt mật khẩu. Mật 
 1. Trong Apps Script: **Project Settings (⚙) → Script Properties → Add script property**.
 2. Khóa `WEB_PASSWORD`, giá trị là mật khẩu tối thiểu 8 ký tự. Lưu.
 3. Dán lại [apps-script/Code.gs](./apps-script/Code.gs) và **Triển khai → Quản lý các bản triển khai → Chỉnh sửa → Phiên bản mới → Triển khai**.
-4. Lần đầu mở website trên mỗi trình duyệt, nhập mật khẩu; trình duyệt nhớ lại. Nhập sai thì hỏi lại. Đổi mật khẩu bằng cách sửa Script Property.
+4. **Link riêng:** `https://<tài-khoản>.github.io/<repo>/#k=MẬT_KHẨU`. Lần đầu mở link này trên một thiết bị, website lưu mật khẩu vào trình duyệt, xóa nó khỏi thanh địa chỉ rồi tự đồng bộ. Các lần sau mở link thường (không có `#k=`) là vào luôn. Nếu mật khẩu có ký tự đặc biệt (`&`, `#`, `%`, khoảng trắng, chữ có dấu), hãy mã hóa bằng `encodeURIComponent` (hoặc dùng mật khẩu chỉ gồm chữ và số). Phần sau dấu `#` không được gửi lên máy chủ và không nằm trong repo; đừng đăng link riêng lên nơi công khai. Mở link thường trên thiết bị mới sẽ chỉ báo "Cần mở link riêng". Đổi mật khẩu bằng cách sửa Script Property rồi tạo link riêng mới; thiết bị cũ sẽ bị từ chối cho tới khi mở link mới.
 
 Mật khẩu đi kèm mỗi yêu cầu đọc dưới dạng tham số URL nên có thể xuất hiện trong nhật ký của Google. Đây là mức bảo vệ cho trang gia đình, không thay thế đăng nhập thật. Đừng dùng lại mật khẩu quan trọng.
 
