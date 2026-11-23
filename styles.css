@@ -202,10 +202,16 @@ a { color: var(--blue-ink); }
 
 .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
 .metric { min-width: 0; min-height: 118px; padding: 18px 20px; border-radius: var(--radius-lg); background: var(--blue-100); box-shadow: var(--shadow); }
-.metric:nth-child(4n+1) { background: var(--blue-100); --ink: var(--blue-ink); }
-.metric:nth-child(4n+2) { background: var(--pink-100); --ink: var(--pink-ink); }
-.metric:nth-child(4n+3) { background: var(--mint-100); --ink: var(--mint-ink); }
-.metric:nth-child(4n+4) { background: var(--butter-100); --ink: var(--butter-ink); }
+/* Màu theo ý nghĩa, không theo vị trí:
+   info xanh dương = tổng/thông tin · good mint = hoàn thành/tốt · wait vàng bơ = đang chờ/cần theo dõi
+   danger đỏ nhạt = quá hạn/vượt/rủi ro · progress lavender = tiến độ/số thực tế · neutral be = trung tính */
+.metric { --ink: var(--blue-ink); }
+.metric.tone-info { background: var(--blue-100); --ink: var(--blue-ink); }
+.metric.tone-good { background: var(--mint-100); --ink: var(--mint-ink); }
+.metric.tone-wait { background: var(--butter-100); --ink: var(--butter-ink); }
+.metric.tone-danger { background: var(--red-100); --ink: var(--red-ink); }
+.metric.tone-progress { background: var(--lav-100); --ink: var(--lav-ink); }
+.metric.tone-neutral { background: var(--beige-100); --ink: var(--beige-ink); }
 .metric-label { display: flex; align-items: center; gap: 10px; min-height: 30px; font-size: 14px; font-weight: 700; color: var(--ink); }
 .metric-label svg { width: 30px; height: 30px; padding: 6px; flex: none; border-radius: 10px; background: rgba(255, 255, 255, .75); }
 .metric-value { margin: 6px 0 2px; font-size: 32px; font-weight: 800; line-height: 1.15; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--text); overflow-wrap: anywhere; }
@@ -304,10 +310,11 @@ a { color: var(--blue-ink); }
 .insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; margin-bottom: 20px; }
 .insight-grid > * { min-width: 0; }
 .insight-grid .sidebox { margin: 0; }
-.insight-grid .sidebox:nth-child(4n+1) { border-top: 4px solid var(--blue-300); }
-.insight-grid .sidebox:nth-child(4n+2) { border-top: 4px solid var(--pink-300); }
-.insight-grid .sidebox:nth-child(4n+3) { border-top: 4px solid var(--mint-500); }
-.insight-grid .sidebox:nth-child(4n+4) { border-top: 4px solid var(--butter-500); }
+.sidebox.tone-info { border-top: 4px solid var(--blue-300); }
+.sidebox.tone-good { border-top: 4px solid var(--mint-500); }
+.sidebox.tone-wait { border-top: 4px solid var(--butter-500); }
+.sidebox.tone-danger { border-top: 4px solid var(--red-500); }
+.sidebox.tone-progress { border-top: 4px solid var(--lav-500); }
 .insight-sub { margin: 0 0 14px; font-size: 13px; color: var(--sub); }
 .big-figure { font-size: 25px; font-weight: 800; line-height: 1.2; letter-spacing: -.02em; }
 .big-figure small { font-size: 13px; font-weight: 700; letter-spacing: 0; color: var(--sub); }

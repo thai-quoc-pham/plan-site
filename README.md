@@ -10,6 +10,10 @@ Website tĩnh HTML/CSS/JavaScript chạy trên GitHub Pages. Dữ liệu lịch 
 - **Ngân sách:** đặt tổng ngân sách mục tiêu (Cài đặt hoặc nút trong tab Ngân sách), thanh mức đã dùng và cảnh báo khi vượt; biểu đồ cơ cấu chi theo danh mục; so sánh dự trù và thực tế; lịch thanh toán (quá hạn, sắp đến hạn trong 14 ngày); bình quân mỗi khách và mỗi mâm; lọc theo trạng thái thanh toán và sắp xếp. "Dự kiến chi" của một khoản là giá thực tế nếu đã chốt, chưa có thì lấy dự trù.
 - **Khách mời:** thống kê cơ cấu xác nhận và theo nhóm, theo dõi thiệp đã gửi (bấm biểu tượng gửi, hoặc đánh dấu cả nhóm), bộ lọc thiệp mời, sắp xếp A-Z, cảnh báo khách trùng tên/số điện thoại và bàn vượt sức chứa, liên kết Gọi/Zalo từ số điện thoại.
 
+## Quy ước màu
+
+Màu của thẻ số liệu, thẻ thống kê và nhãn trạng thái đi theo ý nghĩa, không theo vị trí: **xanh dương** = tổng/thông tin, **xanh mint** = hoàn thành/tốt, **vàng bơ** = đang chờ/cần theo dõi, **đỏ nhạt** = quá hạn/vượt/rủi ro, **lavender** = tiến độ và số thực tế, **be** = trung tính. Hồng chỉ dùng làm màu nhấn của thương hiệu (ngày cưới, nhóm khách). Thẻ "Quá hạn" tự chuyển xanh mint khi không còn việc quá hạn.
+
 ## Cấu trúc mã
 
 | Tệp | Vai trò |
