@@ -17,6 +17,15 @@
   const names = Object.keys(dataColumns);
   const columns = Object.fromEntries(names.map(name => [name, ['STT', ...dataColumns[name]]]));
   const str = value => value == null ? '' : String(value);
+  // Ô ngày do Google Sheets tự đổi kiểu có thể về dạng ISO ('2027-03-15T17:00:00.000Z'); đưa về YYYY-MM-DD theo giờ máy.
+  const day = value => {
+    const v = str(value);
+    if (!/^\d{4}-\d{2}-\d{2}T/.test(v)) return v;
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return v;
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  };
   const number = value => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
   const optionalMoney = value => value == null || str(value).trim() === '' ? '' : number(value);
   const bool = value => value === true || /^(true|1|yes|có|da|đã)$/i.test(str(value).trim());
@@ -44,15 +53,15 @@
       });
     };
     const meta = {...fallback.meta};
-    for (const [key, value] of body('Cài đặt')) if (Object.hasOwn(meta, key)) meta[key] = key === 'tableSize' ? Math.max(1, Math.floor(number(value) || 10)) : str(value);
-    const schedule = body('Lịch trình').map(r => ({id:str(r[0]), date:str(r[1]), start:str(r[2]), end:str(r[3]), title:str(r[4]), kind:str(r[5]), venue:str(r[6]), owner:str(r[7]), status:str(r[8]) || 'planned', notes:str(r[9]), major:bool(r[10]), tasks:[]}));
+    for (const [key, value] of body('Cài đặt')) if (Object.hasOwn(meta, key)) meta[key] = key === 'tableSize' ? Math.max(1, Math.floor(number(value) || 10)) : key === 'weddingDate' ? day(value) : str(value);
+    const schedule = body('Lịch trình').map(r => ({id:str(r[0]), date:day(r[1]), start:str(r[2]), end:str(r[3]), title:str(r[4]), kind:str(r[5]), venue:str(r[6]), owner:str(r[7]), status:str(r[8]) || 'planned', notes:str(r[9]), major:bool(r[10]), tasks:[]}));
     const events = new Map(schedule.map(x => [x.id, x]));
     for (const r of body('Checklist')) { const event = events.get(str(r[1])); if (!event) throw Error(`Checklist có ID sự kiện không tồn tại: ${str(r[1])}`); event.tasks.push({id:str(r[0]), title:str(r[2]), done:bool(r[3])}); }
-    const todos = body('Công việc').map(r => ({id:str(r[0]), title:str(r[1]), category:str(r[2]), priority:str(r[3]), due:str(r[4]), assignee:str(r[5]), status:str(r[6]), notes:str(r[7]), origin:str(r[8])}));
+    const todos = body('Công việc').map(r => ({id:str(r[0]), title:str(r[1]), category:str(r[2]), priority:str(r[3]), due:day(r[4]), assignee:str(r[5]), status:str(r[6]), notes:str(r[7]), origin:str(r[8])}));
     const guestGroups = body('Nhóm khách').map(r => ({id:str(r[0]), name:str(r[1]), order:number(r[2]), guests:[]})).sort((a,b) => a.order - b.order).map(({order, ...g}) => g);
     const groups = new Map(guestGroups.map(g => [g.id, g]));
     for (const r of body('Khách mời')) { const group = groups.get(str(r[1])); if (!group) throw Error(`Khách mời có ID nhóm không tồn tại: ${str(r[1])}`); group.guests.push({id:str(r[0]), name:str(r[2]), phone:str(r[3]), plus:number(r[4]), rsvp:str(r[5]) || 'pending', checkedCount:number(r[6]), table:str(r[7]), invited:bool(r[8]), note:str(r[9])}); }
-    const budget = body('Ngân sách').map(r => ({id:str(r[0]), name:str(r[1]), category:str(r[2]), estimate:optionalMoney(r[3]), actual:optionalMoney(r[4]), paid:optionalMoney(r[5]), vendor:str(r[6]), due:str(r[7]), note:str(r[8])}));
+    const budget = body('Ngân sách').map(r => ({id:str(r[0]), name:str(r[1]), category:str(r[2]), estimate:optionalMoney(r[3]), actual:optionalMoney(r[4]), paid:optionalMoney(r[5]), vendor:str(r[6]), due:day(r[7]), note:str(r[8])}));
     return {version:2, meta, schedule, todos, budget, guestGroups};
   }
   return {columns, dataColumns, names, rowsFor, matrixFor, parse};

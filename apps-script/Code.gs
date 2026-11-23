@@ -43,7 +43,8 @@ const HEADERS = Object.fromEntries(NAMES.map(name => [name, ['STT'].concat(COLUM
   }
 
   function value_(value, name, column) {
-    if (value instanceof Date) {
+    // Không dùng instanceof: Date từ Sheets có thể thuộc realm khác trong Apps Script.
+    if (Object.prototype.toString.call(value) === '[object Date]') {
       const pattern = name === 'Lịch trình' && (column === 2 || column === 3) ? 'HH:mm' : 'yyyy-MM-dd';
       return Utilities.formatDate(value, Session.getScriptTimeZone(), pattern);
     }

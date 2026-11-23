@@ -18,4 +18,7 @@ const blankBudget=structuredClone(state);blankBudget.budget.push({id:'b3',name:'
 assert.deepEqual(schema.parse(schema.matrixFor(blankBudget),state).budget[1],blankBudget.budget[1]);
 const noDate=structuredClone(state);noDate.meta.weddingDate='';
 assert.equal(schema.parse(schema.matrixFor(noDate),state).meta.weddingDate,'');
+const isoMatrix=schema.matrixFor(state);const wd=isoMatrix['Cài đặt'].find(r=>r[1]==='weddingDate');wd[2]='2027-03-16T05:00:00.000Z';
+isoMatrix['Công việc'][1][5]='2027-01-02T05:00:00.000Z';
+const fromIso=schema.parse(isoMatrix,state);assert.equal(fromIso.meta.weddingDate,'2027-03-16');assert.equal(fromIso.todos[0].due,'2027-01-02');
 console.log('PASS: roundtrip, thêm/sửa dữ liệu của 5 phần và checklist');
