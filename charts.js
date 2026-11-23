@@ -41,7 +41,7 @@
     const legend = series.map((s, i) => `<span class="legend-item"><span class="legend-dot s${i}"></span>${esc(s.label)}</span>`).join('');
     const body = rows.map(r => `<div class="hbar-row"><div class="hbar-name">${esc(r.label)}</div><div class="hbar-tracks">${series.map((s, i) => {
       const v = Number(r[s.key]) || 0;
-      return `<div class="hbar-line"><div class="hbar-track"><span class="hbar-fill s${i}" style="width:${r1(v / max * 100)}%"></span></div><span class="hbar-val">${esc(fmt(v))}</span></div>`;
+      return `<div class="hbar-line"><div class="hbar-track"><span class="hbar-fill s${i}" style="width:${r1(v / max * 100)}%"></span></div><span class="hbar-val">${v?esc(fmt(v)):'—'}</span></div>`;
     }).join('')}</div></div>`).join('');
     return `<div class="hbars" role="group" aria-label="${esc(o.ariaLabel || 'Biểu đồ cột')}"><div class="chart-legend-inline">${legend}</div>${body}</div>`;
   }
