@@ -16,4 +16,6 @@ assert.equal(schema.parse(schema.matrixFor(changed),state).schedule.length,2);
 assert.equal(schema.parse(schema.matrixFor(changed),state).guestGroups[0].guests.length,2);
 const blankBudget=structuredClone(state);blankBudget.budget.push({id:'b3',name:'Hoa cưới',category:'Trang trí & hoa',estimate:'',actual:'',paid:'',vendor:'',due:'',note:'Chờ báo giá'});
 assert.deepEqual(schema.parse(schema.matrixFor(blankBudget),state).budget[1],blankBudget.budget[1]);
+const noDate=structuredClone(state);noDate.meta.weddingDate='';
+assert.equal(schema.parse(schema.matrixFor(noDate),state).meta.weddingDate,'');
 console.log('PASS: roundtrip, thêm/sửa dữ liệu của 5 phần và checklist');
