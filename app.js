@@ -635,4 +635,5 @@ document.addEventListener('drop',ev=>{const target=ev.target.closest('.guest-gro
 document.addEventListener('dragend',()=>dragging=null);
 /* Khởi động, ghi v2 để không nạp lại dữ liệu mẫu đã xóa khi tải lại. */
 adoptLinkKey();render();persist();startSheet();
+window.addEventListener('hashchange',()=>{if(adoptLinkKey())startSheet()});
 })();
