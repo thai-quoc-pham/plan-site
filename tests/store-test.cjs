@@ -19,6 +19,18 @@ store.postChanges=async(changes,expected)=>{
   remote=schema.parse(matrices,remote);
 };
 (async()=>{
+  // Mật khẩu từ link riêng: #k=...
+  const keyStore=new root.SheetStore(()=>{},()=>local);
+  assert.equal(keyStore.key(),'');
+  assert.equal(keyStore.adoptKeyFromHash(''),false);
+  assert.equal(keyStore.adoptKeyFromHash('#foo=bar'),false);
+  assert.equal(keyStore.key(),'');
+  assert.equal(keyStore.adoptKeyFromHash('#k=m%E1%BA%ADt%26kh%E1%BA%A9u+1'),true);
+  assert.equal(keyStore.key(),'mật&khẩu+1');
+  assert.equal(new root.SheetStore(()=>{},()=>local).key(),'mật&khẩu+1');
+  assert.equal(keyStore.adoptKeyFromHash('#k='),false);
+  assert.equal(keyStore.key(),'mật&khẩu+1');
+  keyStore.setKey('');
   await store.connect(local);
   local.budget.push({id:'b1',name:'Chi thử',category:'Khác',estimate:1000,actual:900,paid:100,vendor:'',due:'',note:''});
   local.todos.push({id:'t1',title:'Việc thử',category:'Khác',priority:'normal',due:'',assignee:'',status:'open',notes:''});
@@ -37,5 +49,5 @@ store.postChanges=async(changes,expected)=>{
   assert.equal(remote.todos[0].title,'Sửa trên web');
   assert.equal(store.pending.size,0);
   assert.equal(new root.SheetStore(()=>{},()=>local).pending.size,0);
-  console.log('PASS: tự ghi hai tab, giữ thay đổi lỗi qua tải lại trang, phát hiện xung đột');
+  console.log('PASS: mật khẩu từ link riêng; tự ghi hai tab, giữ thay đổi lỗi qua tải lại trang, phát hiện xung đột');
 })().catch(error=>{console.error(error);process.exitCode=1});
