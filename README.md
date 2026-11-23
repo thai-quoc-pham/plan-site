@@ -27,7 +27,7 @@ Màu của thẻ số liệu, thẻ thống kê và nhãn trạng thái đi theo
 | `apps-script/Code.gs` | Mã dán vào Apps Script |
 | `tests/` | Kiểm thử Node.js, chạy bằng `npm test` (không cần cài gói) |
 
-Mục tiêu ngân sách được lưu trong tab `Cài đặt` của Sheet (khóa `budgetTarget`), không đổi cấu trúc các tab; không cần cập nhật Apps Script cho tính năng này. `.github/workflows/test.yml` tự chạy bộ test mỗi khi đẩy mã lên GitHub.
+Mục tiêu ngân sách được lưu trong tab `Cài đặt` của Sheet (khóa `budgetTarget`), không đổi cấu trúc các tab; không cần cập nhật Apps Script cho tính năng này. Để bật kiểm thử tự động trên GitHub, chép `ci/test.yml.example` thành `.github/workflows/test.yml` rồi đẩy lên (token cần quyền **Workflows: Read and write**); tệp mẫu chạy `npm test` mỗi khi đẩy mã.
 
 ## Đặt mật khẩu truy cập (bắt buộc)
 
