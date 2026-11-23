@@ -22,7 +22,7 @@ const props={pw:'mat-khau-test'};
 const mime={JSON:'json',JAVASCRIPT:'javascript'};
 const context={
   SpreadsheetApp:{openById:id=>{assert.equal(id,'1s2dMJTbWsNWWQVhfWqozZsfrl6300EFnG5x1euFo7qw');return{getSheetByName:name=>sheets[name]}},flush:()=>{}},
-  Utilities:{sleep:()=>{},DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,value)=>Array.from(crypto.createHash('sha256').update(value).digest()),formatDate:()=>''},
+  Utilities:{sleep:()=>{},DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,value)=>Array.from(crypto.createHash('sha256').update(value).digest()),formatDate:(d,tz,pattern)=>'FMT:'+pattern},
   Session:{getScriptTimeZone:()=> 'Asia/Ho_Chi_Minh'},
   LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{}})},
   ContentService:{MimeType:mime,createTextOutput:content=>({content,setMimeType(type){this.type=type;return this}})},
@@ -33,6 +33,9 @@ vm.createContext(context);
 vm.runInContext(fs.readFileSync('apps-script/Code.gs','utf8'),context);
 const get=()=>JSON.parse(context.doGet({parameter:{key:'mat-khau-test'}}).content);
 const post=body=>JSON.parse(context.doPost({postData:{contents:JSON.stringify({key:'mat-khau-test',...body})}}).content);
+data['Cài đặt'].push([99,'weddingDate',vm.runInNewContext('new Date(0)')]);   // Date thuộc realm khác
+const dateCheck=get();assert.equal(dateCheck.matrices['Cài đặt'].at(-1)[2],'FMT:yyyy-MM-dd');
+data['Cài đặt'].pop();
 const first=get();assert.equal(first.ok,true);assert.equal(Object.keys(first.matrices).length,7);
 const todo=['t1','Đặt thiệp','Thiệp & khách mời','normal','2027-03-01','Cả hai','open','',''];
 const budget=['b1','Đặt cọc','Khác',1000,900,100,'','',''];

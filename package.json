@@ -1,0 +1,6 @@
+{
+  "name": "plan-site",
+  "private": true,
+  "description": "Kế hoạch đám cưới: website tĩnh đồng bộ Google Sheets",
+  "scripts": { "test": "node --test tests/*.cjs" }
+}
