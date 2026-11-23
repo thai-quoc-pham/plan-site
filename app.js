@@ -18,6 +18,8 @@ const budgetMoney=n=>n==null||String(n).trim()===''?'—':currency(n);
 const miniMoney=n=>Math.abs(n)>=1000000000?(num(n)/1000000000).toLocaleString('vi-VN',{maximumFractionDigits:2})+' tỷ':Math.abs(n)>=1000000?(num(n)/1000000).toLocaleString('vi-VN',{maximumFractionDigits:1})+' tr':currency(n);
 const dateVN=d=>{if(!d)return 'Chưa đặt';const t=new Date(d+'T12:00:00');return Number.isNaN(t.getTime())?'Chưa đặt':new Intl.DateTimeFormat('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'}).format(t)};
 const dayVN=d=>{const t=new Date(d+'T12:00:00');return Number.isNaN(t.getTime())?d:new Intl.DateTimeFormat('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}).format(t)};
+const WEDDING_PENDING='Đang chọn ngày lành';
+const weddingText=d=>d?dateVN(d):WEDDING_PENDING;
 const dateShort=d=>d?dateVN(d).slice(0,5):'—';
 const today=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`};
 const incDate=(d,n)=>{const t=new Date((d||today())+'T12:00:00');t.setDate(t.getDate()+n);return [t.getFullYear(),String(t.getMonth()+1).padStart(2,'0'),String(t.getDate()).padStart(2,'0')].join('-')};
@@ -66,6 +68,7 @@ const EVENT_STATES={planned:'Dự kiến',ready:'Đã chuẩn bị',done:'Hoàn 
  * Hai ngày Dạm ngõ, Ăn hỏi và bộ To-do là phương án tham khảo do chúng ta biên soạn,
  * không phải dữ liệu đã xác minh từ các tab tương ứng trên website gốc. */
 function scheduleTemplate(d){
+ if(!d)return [];
  const day1=incDate(d,-31),day2=incDate(d,-2);
  const make=(date,start,end,title,kind,venue,owner,notes,tasks=[],major=false)=>({id:id(),date,start,end,title,kind,venue,owner,notes,status:'planned',major,tasks:tasks.map(title=>({id:id(),title,done:false}))});
  return [
@@ -149,12 +152,12 @@ function todoTemplate(d,includeExtended=false){
  ['Hậu cần','Đối soát chi phí nhà hàng và các bên sau tiệc',-1,'high','Người quản lý ngân sách','Kiểm tra hóa đơn cuối, cọc đã trừ, bàn sử dụng thực tế.'],
  ['Hậu cần','Trả váy/vest thuê và nhận ảnh/video theo hợp đồng',-7,'normal','Cô dâu & chú rể','Chốt thời hạn nhận bàn giao và kiểm tra đủ file.']
  ];
- return (includeExtended?[...reference,...rows]:reference).map(([category,title,days,priority,assignee,notes])=>({id:id(),title,category,priority,due:incDate(d,-days),assignee,status:'open',notes,origin:includeExtended&&rows.some(r=>r[1]===title)?'extra':'reference'}));
+ return (includeExtended?[...reference,...rows]:reference).map(([category,title,days,priority,assignee,notes])=>({id:id(),title,category,priority,due:d?incDate(d,-days):'',assignee,status:'open',notes,origin:includeExtended&&rows.some(r=>r[1]===title)?'extra':'reference'}));
 }
-const defaultState=()=>{const meta={bride:'Dâu',groom:'Rể',weddingDate:'2027-03-16',venue:'',tableSize:10};return{version:CURRENT_VERSION,meta,schedule:scheduleTemplate(meta.weddingDate),todos:todoTemplate(meta.weddingDate),budget:[],guestGroups:initialGroups.map(name=>({id:id(),name,guests:[]}))}};
+const defaultState=()=>{const meta={bride:'Dâu',groom:'Rể',weddingDate:'',venue:'',tableSize:10};return{version:CURRENT_VERSION,meta,schedule:scheduleTemplate(meta.weddingDate),todos:todoTemplate(meta.weddingDate),budget:[],guestGroups:initialGroups.map(name=>({id:id(),name,guests:[]}))}};
 function normalizeState(o){
  if(!o||typeof o!=='object')throw Error('Tệp dữ liệu không hợp lệ.');
- const meta={bride:'Dâu',groom:'Rể',weddingDate:'2027-03-16',venue:'',tableSize:10,...(o.meta||{})};
+ const meta={bride:'Dâu',groom:'Rể',weddingDate:'',venue:'',tableSize:10,...(o.meta||{})};
  const isOld=(Number(o.version)||1)<2;
  const x={version:CURRENT_VERSION,meta,schedule:Array.isArray(o.schedule)?o.schedule:[],todos:Array.isArray(o.todos)?o.todos:[],budget:Array.isArray(o.budget)?o.budget:[],guestGroups:Array.isArray(o.guestGroups)?o.guestGroups:initialGroups.map(name=>({id:id(),name,guests:[]}))};
  if(isOld&&x.schedule.length===0)x.schedule=scheduleTemplate(meta.weddingDate);
@@ -189,14 +192,14 @@ function tabDescription(){return{schedule:'Sắp xếp từng mốc thời gian 
 function nav(){return[['schedule','Lịch trình','calendar'],['todo','To-do','listCheck'],['guests','Khách mời','users'],['budget','Ngân sách','wallet']].map(([key,label,ic])=>`<button class="nav-btn ${view.tab===key?'active':''}" data-action="tab" data-key="${key}" aria-current="${view.tab===key?'page':'false'}">${ico(ic)} ${label}</button>`).join('')}
 function headAction(){return{schedule:`${btn(ico('plus')+' Thêm sự kiện','new-schedule','btn primary')}`,todo:btn(ico('plus')+' Thêm công việc','new-todo','btn primary'),budget:btn(ico('plus')+' Thêm khoản chi','new-budget','btn primary'),guests:btn(ico('plus')+' Thêm nhiều khách','bulk-guests','btn primary')}[view.tab]}
 function layout(body){
- const days=Math.round((new Date(state.meta.weddingDate+'T12:00:00')-new Date(today()+'T12:00:00'))/86400000);
+ const days=state.meta.weddingDate?Math.round((new Date(state.meta.weddingDate+'T12:00:00')-new Date(today()+'T12:00:00'))/86400000):NaN;
  const syncError=sheetStore.error||syncStatus.startsWith('Không tải được');
  $('#app').innerHTML=`<div class="shell">
- <header class="topbar"><div class="brand"><div class="brand-mark">${ico('heart')}</div><div class="brand-text"><div class="brand-title">Kế hoạch đám cưới</div><div class="brand-sub">${e(state.meta.groom)} &amp; ${e(state.meta.bride)} · ${e(dateVN(state.meta.weddingDate))}</div></div></div>
+ <header class="topbar"><div class="brand"><div class="brand-mark">${ico('heart')}</div><div class="brand-text"><div class="brand-title">Kế hoạch đám cưới</div><div class="brand-sub">${e(state.meta.groom)} &amp; ${e(state.meta.bride)} · ${e(weddingText(state.meta.weddingDate))}</div></div></div>
  <nav class="nav" aria-label="Điều hướng chính">${nav()}</nav>
- <div class="top-actions"><span id="save-status" data-sync-status class="save-caption ${syncError?'sync-error':''}">${e(syncStatus)}</span>${btn(ico('edit')+`<span class="quick-profile-copy"><span class="quick-profile-names">${e(state.meta.groom)} &amp; ${e(state.meta.bride)}</span><span class="quick-profile-date">${e(dateVN(state.meta.weddingDate))}</span></span>`,'wedding-info','btn quick-profile',`aria-label="Sửa tên cô dâu, chú rể và ngày cưới" title="Sửa tên và ngày cưới"`)}${btn(ico('settings'),'settings','icon-btn','aria-label="Cài đặt" title="Cài đặt và sao lưu"')}</div></header>
+ <div class="top-actions"><span id="save-status" data-sync-status class="save-caption ${syncError?'sync-error':''}">${e(syncStatus)}</span>${btn(ico('edit')+`<span class="quick-profile-copy"><span class="quick-profile-names">${e(state.meta.groom)} &amp; ${e(state.meta.bride)}</span><span class="quick-profile-date">${e(weddingText(state.meta.weddingDate))}</span></span>`,'wedding-info','btn quick-profile',`aria-label="Sửa tên cô dâu, chú rể và ngày cưới" title="Sửa tên và ngày cưới"`)}${btn(ico('settings'),'settings','icon-btn','aria-label="Cài đặt" title="Cài đặt và sao lưu"')}</div></header>
  <nav class="mobile-nav" aria-label="Điều hướng điện thoại">${nav()}</nav>
- <section class="masthead"><div><div class="eyebrow">Wedding organizer · Google Sheets</div><h1>${tabTitle()}</h1><p>${tabDescription()}</p></div><div class="head-actions"><span class="date-pill">${ico('calendar')} ${dateVN(state.meta.weddingDate)} ${Number.isFinite(days)?`· ${days>=0?`còn ${days} ngày`:`đã qua ${-days} ngày`}`:''}</span>${headAction()}</div></section><div data-sync-status class="mobile-sync-status ${syncError?'sync-error':''}">${e(syncStatus)}</div>
+ <section class="masthead"><div><div class="eyebrow">Wedding organizer · Google Sheets</div><h1>${tabTitle()}</h1><p>${tabDescription()}</p></div><div class="head-actions"><span class="date-pill">${ico('calendar')} ${e(weddingText(state.meta.weddingDate))} ${Number.isFinite(days)?`· ${days>=0?`còn ${days} ngày`:`đã qua ${-days} ngày`}`:''}</span>${headAction()}</div></section><div data-sync-status class="mobile-sync-status ${syncError?'sync-error':''}">${e(syncStatus)}</div>
  ${body}<footer class="footer">${sheetStore.connected?'Tự đồng bộ Google Sheets · Dữ liệu máy được lưu để dự phòng':sheetStore.configured()?'Đang lưu trên trình duyệt · Chờ Google Sheets hoạt động trở lại':'Đang lưu trên trình duyệt · Cần triển khai Apps Script để đồng bộ'} · Có thể xuất bản sao lưu JSON</footer></div>`;
 }
 function empty(icon,title,description,action,label){return `<div class="empty">${ico(icon)}<h3>${title}</h3><p>${description}</p>${action?btn(ico('plus')+' '+label,action,'btn soft'):''}</div>`}
@@ -210,7 +213,7 @@ function renderSchedule(){
  const byDate=Object.groupBy?Object.groupBy(filtered,x=>x.date||'Chưa có ngày'):filtered.reduce((m,x)=>((m[x.date||'Chưa có ngày']??=[]).push(x),m),{});
  const ordered=Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]));
  const labelFor=d=>{if(d===state.meta.weddingDate)return 'Ngày cưới';const items=all.filter(x=>x.date===d);return items.some(x=>/dạm ngõ/i.test(x.title))?'Dạm ngõ':items.some(x=>/ăn hỏi/i.test(x.title))?'Ăn hỏi':'Sự kiện khác'};
- const hasWeddingEvents=all.some(x=>x.date===state.meta.weddingDate);
+ const hasWeddingEvents=!!state.meta.weddingDate&&all.some(x=>x.date===state.meta.weddingDate);
  const dayNavigation=`<div class="day-nav" style="margin:0;padding:15px 20px 0">${[['all','Tất cả'],...[...dates].sort().map(d=>[d,`${dateShort(d)} · ${labelFor(d)}`])].map(([k,t])=>`<button type="button" class="day-chip ${view.scheduleDate===k?'active':''}" data-action="select-schedule-day" data-date="${e(k)}" aria-pressed="${view.scheduleDate===k}">${e(t)}</button>`).join('')}</div>`;
  const taskCount=all.reduce((n,x)=>n+(x.tasks||[]).length,0),taskDone=all.reduce((n,x)=>n+(x.tasks||[]).filter(y=>y.done).length,0);
  return `<div class="metrics">${metric('Tổng mốc chương trình',all.length,'trên '+dates.size+' ngày','calendar',true)}${metric('Checklist theo mốc',`${taskDone}/${taskCount}`,'việc tại từng khung giờ','listCheck')}${metric('Sắp diễn ra',upcoming,'mốc chưa hoàn thành','clock')}${metric('Hoàn thành',all.length?Math.round(done/all.length*100)+'%':'0%','đã xong '+done+'/'+all.length+' mốc','checkCircle')}</div>
@@ -314,18 +317,18 @@ function openBulkGuests(){
 }
 function openSettings(){
  showModal('Cài đặt & dữ liệu','Mỗi thay đổi được lưu trên máy và tự ghi lên Google Sheets khi Apps Script đã triển khai.',
- inp('groom','Tên chú rể',state.meta.groom,'text')+inp('bride','Tên cô dâu',state.meta.bride,'text')+inp('weddingDate','Ngày cưới',state.meta.weddingDate,'date')+inp('tableSize','Số người mỗi mâm',state.meta.tableSize,'number',{min:1,step:1})+inp('venue','Địa điểm chính',state.meta.venue,'text',{wide:true})+`<div class="wide"><div class="notice">${ico('info')}${sheetStore.connected?'Đã tải Google Sheets. Mọi thay đổi trên web tự đồng bộ. Nếu sửa trực tiếp trên Sheet, hãy tải lại dữ liệu trước khi tiếp tục.':'Chưa tải được Google Sheets. Dữ liệu hiện chỉ lưu trên trình duyệt; kiểm tra URL Apps Script trong sheet-config.js và thử lại.'}</div><div class="stack" style="margin-top:12px">${btn(ico('undo')+' Thử đồng bộ lại','retry-sheet','btn small')}${btn(ico('arrowDown')+' Tải từ Sheets','reload-sheet','btn small')}${btn(ico('arrowUp')+' Ghi dữ liệu máy lên Sheets','upload-sheet','btn small')}${btn(ico('arrowUp')+' Khôi phục JSON','import-json','btn small')}${btn(ico('trash')+' Xóa tất cả dữ liệu','reset-data','btn small danger')}</div></div>`,
+ inp('groom','Tên chú rể',state.meta.groom,'text')+inp('bride','Tên cô dâu',state.meta.bride,'text')+inp('weddingDate','Ngày cưới (để trống nếu chưa chọn)',state.meta.weddingDate,'date')+inp('tableSize','Số người mỗi mâm',state.meta.tableSize,'number',{min:1,step:1})+inp('venue','Địa điểm chính',state.meta.venue,'text',{wide:true})+`<div class="wide"><div class="notice">${ico('info')}${sheetStore.connected?'Đã tải Google Sheets. Mọi thay đổi trên web tự đồng bộ. Nếu sửa trực tiếp trên Sheet, hãy tải lại dữ liệu trước khi tiếp tục.':'Chưa tải được Google Sheets. Dữ liệu hiện chỉ lưu trên trình duyệt; kiểm tra URL Apps Script trong sheet-config.js và thử lại.'}</div><div class="stack" style="margin-top:12px">${btn(ico('undo')+' Thử đồng bộ lại','retry-sheet','btn small')}${btn(ico('arrowDown')+' Tải từ Sheets','reload-sheet','btn small')}${btn(ico('arrowUp')+' Ghi dữ liệu máy lên Sheets','upload-sheet','btn small')}${btn(ico('arrowUp')+' Khôi phục JSON','import-json','btn small')}${btn(ico('trash')+' Xóa tất cả dữ liệu','reset-data','btn small danger')}</div></div>`,
  'settings','','', 'Lưu cài đặt');
 }
 function openWeddingInfo(){
  showModal('Tên và ngày cưới','Chỉnh nhanh thông tin hiển thị trên toàn bộ website.',
- inp('groom','Tên chú rể',state.meta.groom,'text',{required:true})+inp('bride','Tên cô dâu',state.meta.bride,'text',{required:true})+inp('weddingDate','Ngày cưới',state.meta.weddingDate,'date',{required:true})+`<div class="wide small-text">Ngày của từng sự kiện và hạn công việc giữ nguyên để bạn điều chỉnh theo kế hoạch thực tế.</div>`,
+ inp('groom','Tên chú rể',state.meta.groom,'text',{required:true})+inp('bride','Tên cô dâu',state.meta.bride,'text',{required:true})+inp('weddingDate','Ngày cưới (để trống nếu chưa chọn)',state.meta.weddingDate,'date')+`<div class="wide small-text">Ngày của từng sự kiện và hạn công việc giữ nguyên để bạn điều chỉnh theo kế hoạch thực tế.</div>`,
  'wedding-info','','','Lưu thông tin');
 }
 function applyWeddingInfo(data){
  const weddingDate=String(data.weddingDate||'').trim();
  const date=new Date(weddingDate+'T12:00:00');
- if(!/^\d{4}-\d{2}-\d{2}$/.test(weddingDate)||Number.isNaN(date.getTime())||[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-')!==weddingDate)throw Error('Ngày cưới không hợp lệ.');
+ if(weddingDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(weddingDate)||Number.isNaN(date.getTime())||[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-')!==weddingDate))throw Error('Ngày cưới không hợp lệ.');
  if(weddingDate!==state.meta.weddingDate)view.scheduleDate='all';
  state.meta={...state.meta,groom:String(data.groom||'').trim()||'Rể',bride:String(data.bride||'').trim()||'Dâu',weddingDate};
 }
@@ -470,6 +473,7 @@ function importGuestRows(rows,defaultGroupId){
 }
 /* ---------------- Mẫu ban đầu (chỉ nạp khi người dùng chọn) ---------------- */
 function seedSchedule(){
+ if(!state.meta.weddingDate){toast('Hãy chọn ngày cưới trước khi dùng lịch trình mẫu.',true);return}
  const templates=scheduleTemplate(state.meta.weddingDate);
  const existing=new Set(state.schedule.map(x=>`${x.date}|${x.title}`));
  const additions=templates.filter(x=>!existing.has(`${x.date}|${x.title}`));
@@ -521,7 +525,7 @@ async function startSheet(){
   if(localStorage.getItem(MIGRATION_KEY)&&sheetStore.dirty.size){
    const matrices=SheetSchema.matrixFor(remote),localRows=SheetSchema.rowsFor(state);
    for(const name of sheetStore.dirty)matrices[name]=[SheetSchema.columns[name],...localRows[name]];
-   state=normalizeState(SheetSchema.parse(matrices,remote));view.scheduleDate=state.meta.weddingDate;update(false);
+   state=normalizeState(SheetSchema.parse(matrices,remote));view.scheduleDate=state.meta.weddingDate||'all';update(false);
    await sheetStore.flush();return;
   }
   const differs=SheetSchema.names.some(name=>JSON.stringify(SheetSchema.rowsFor(state)[name])!==JSON.stringify(SheetSchema.rowsFor(remote)[name]));
@@ -529,7 +533,7 @@ async function startSheet(){
    await sheetStore.overwrite(state);localStorage.setItem(MIGRATION_KEY,'1');render();toast('Đã chuyển dữ liệu máy lên Google Sheets.');return;
   }
   sheetStore.pending.clear();sheetStore.dirty.clear();sheetStore.revisions=sheetStore.latestRevisions;sheetStore.saveQueue();
-  state=normalizeState(remote);view.scheduleDate=state.meta.weddingDate;update(false);
+  state=normalizeState(remote);view.scheduleDate=state.meta.weddingDate||'all';update(false);
   localChangedSinceBoot=false;localStorage.setItem(MIGRATION_KEY,'1');toast('Đã tải dữ liệu từ Google Sheets.');
  }catch(ex){setSyncStatus(ex.message||'Không thể tải Google Sheets.',true);toast(ex.message||'Không thể tải Google Sheets.',true)}
  finally{$('#app').inert=false}
@@ -541,7 +545,7 @@ async function reloadSheet(){
   if(!window.confirm('Tải dữ liệu mới nhất từ Google Sheets và thay thế dữ liệu trên web?'))return;
   const result=await sheetStore.snapshot(state),remote=result.state;
   sheetStore.revisions=result.revisions;sheetStore.baseline=Object.fromEntries(SheetSchema.names.map(name=>[name,JSON.stringify(SheetSchema.rowsFor(remote)[name])]));sheetStore.pending.clear();sheetStore.dirty.clear();sheetStore.saveQueue();
-  state=normalizeState(remote);view.scheduleDate=state.meta.weddingDate;update(false);localChangedSinceBoot=false;setSyncStatus('✓ Đã tải Google Sheets');closeModal();toast('Đã tải dữ liệu mới nhất.');
+  state=normalizeState(remote);view.scheduleDate=state.meta.weddingDate||'all';update(false);localChangedSinceBoot=false;setSyncStatus('✓ Đã tải Google Sheets');closeModal();toast('Đã tải dữ liệu mới nhất.');
  }catch(ex){setSyncStatus(ex.message||'Không thể tải dữ liệu.',true);toast(ex.message||'Không thể tải dữ liệu.',true)}
 }
 async function uploadSheet(){
