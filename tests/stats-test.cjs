@@ -39,3 +39,14 @@ assert.equal(s.awaitingReply,1);                                  // đã gửi 
 assert.deepEqual(s.overfullTables,[{table:'1',count:7}]);
 assert.equal(s.unassigned,3);                                     // B(1)+D(1)+F(1) người chưa có bàn
 assert.deepEqual(s.duplicates.map(d=>[d.type,d.names.length]),[['name',2],['phone',2]]);
+
+// Màu thẻ "Chi phí thực tế" và "Chưa thanh toán"
+assert.equal(stats.actualTone(100,80,true,true),'info');      // nhỏ hơn dự trù: cùng màu với dự trù
+assert.equal(stats.actualTone(100,100,true,true),'wait');     // bằng: vàng
+assert.equal(stats.actualTone(100,120,true,true),'danger');   // lớn hơn: đỏ
+assert.equal(stats.actualTone(0,0,false,false),'neutral');    // chưa có số liệu
+assert.equal(stats.actualTone(0,50,false,true),'neutral');    // chưa có dự trù để so sánh
+assert.equal(stats.owedTone(1,true),'danger');                // còn nợ: đỏ
+assert.equal(stats.owedTone(0,true),'good');                  // trả hết: mint
+assert.equal(stats.owedTone(0,false),'neutral');
+console.log('PASS: màu thẻ ngân sách theo so sánh thực tế/dự trù và công nợ');

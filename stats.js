@@ -88,5 +88,9 @@
       .sort((a, b) => a.table.localeCompare(b.table, undefined, { numeric: true }));
     return { people, entries, expected, arrived, byGroup, invited, notInvited, awaitingReply, unassigned, duplicates, overfullTables, tableSize, tableCounts: [...tableCounts] };
   }
-  return { budgetStats, guestStats, cost, party, checked };
+  /** Màu thẻ "Chi phí thực tế": nhỏ hơn dự trù = info (cùng màu thẻ dự trù), bằng = wait (vàng), lớn hơn = danger (đỏ). */
+  const actualTone = (est, actual, hasEstimate, hasActual) => !hasActual || !hasEstimate ? 'neutral' : actual < est ? 'info' : actual === est ? 'wait' : 'danger';
+  /** Màu thẻ "Chưa thanh toán": còn nợ = danger (đỏ), đã trả hết = good (mint). */
+  const owedTone = (owed, hasActual) => !hasActual ? 'neutral' : owed > 0 ? 'danger' : 'good';
+  return { budgetStats, guestStats, cost, party, checked, actualTone, owedTone };
 });

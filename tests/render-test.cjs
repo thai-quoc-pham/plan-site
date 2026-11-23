@@ -34,6 +34,17 @@ app=boot(st);app.click('tab',{key:'budget'});
 let h=app.html();
 assert.match(h,/class="donut"/);assert.match(h,/chart-progress over/);assert.match(h,/Vượt mục tiêu/);
 assert.match(h,/Quá hạn/);assert.match(h,/Khoản 1/);assert.match(h,/hbar-row/);
+const toneOf=(html,label)=>html.split('class="metric tone-').slice(1).map(part=>[part.split('"')[0],part.slice(0,part.indexOf('metric-value'))]).find(([,head])=>head.includes('</svg>'+label))?.[0];
+assert.equal(toneOf(h,'Chi phí thực tế'),'wait');      // 140tr thực tế = 140tr dự trù
+assert.equal(toneOf(h,'Chưa thanh toán'),'danger');     // còn nợ
+assert.equal(toneOf(h,'Tổng dự trù'),'info');
+const over=base({budgetTarget:'1'});over.budget=[b('1','A',100,150,150),b('2','B',50,50,50)];
+app=boot(over);app.click('tab',{key:'budget'});h=app.html();
+assert.equal(toneOf(h,'Chi phí thực tế'),'danger');     // 200 thực tế > 150 dự trù
+assert.equal(toneOf(h,'Chưa thanh toán'),'good');       // đã trả hết
+const under=base();under.budget=[b('1','A',100,60,10)];app=boot(under);app.click('tab',{key:'budget'});
+assert.equal(toneOf(app.html(),'Chi phí thực tế'),'info');
+app=boot(st);app.click('tab',{key:'budget'});
 app.click('budget-target');assert.match(app.modal(),/Tổng ngân sách mục tiêu/);
 
 // 2b) Lọc và sắp xếp khoản chi
