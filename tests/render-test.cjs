@@ -43,6 +43,17 @@ app.change('budgetStatus','paid');h=app.html();
 const rows=h.slice(h.indexOf('<tbody>'));assert.match(rows,/Khoản 3/);assert.doesNotMatch(rows,/Khoản 1</);
 app.change('budgetStatus','all');app.change('budgetSort','default');
 
-// 3) Chuyển qua tab khách mời không lỗi
-app.click('tab',{key:'guests'});assert.match(app.html(),/Khách mời/);
+// 3) Khách mời: thống kê, cảnh báo, thiệp, bộ lọc
+const gp=(id,name,rsvp,plus=0,x={})=>({id,name,rsvp,plus,phone:'',table:'',invited:false,checkedCount:0,note:'',...x});
+const gst=base();gst.guestGroups=[{id:'g1',name:'Nhà trai',guests:[gp('1','Nguyễn Văn A','yes',1,{table:'1',invited:true,phone:'0901 234 567'}),gp('2','Trần B','pending',0,{invited:true}),gp('3','Lê C','no')]},{id:'g2',name:'Nhà gái',guests:[gp('4','nguyen van a','yes',4,{table:'1'}),gp('5','Võ D','pending')]}];
+app=boot(gst);app.click('tab',{key:'guests'});h=app.html();
+assert.match(h,/Cơ cấu xác nhận/);assert.match(h,/stackbar/);assert.match(h,/Trùng tên/);assert.match(h,/Bàn 1 có 7 người, vượt sức chứa 4/);
+assert.match(h,/href="tel:09012345\d+"/);assert.match(h,/zalo\.me\/0901234567/);
+assert.match(h,/aria-pressed="true"/);assert.match(h,/1 người chưa được xếp bàn|2 người chưa được xếp bàn/);
+app.click('toggle-invited',{id:'5',group:'g2'});assert.match(JSON.stringify(JSON.parse(app.store['wedding-planner-local-v1']).guestGroups[1].guests[1].invited),/true/);
+app.change('guestInvite','unsent');h=app.html();const list=h.slice(h.indexOf('guest-list'));
+assert.doesNotMatch(list,/Trần B/);assert.doesNotMatch(list,/Lê C/);assert.match(list,/nguyen van a/);
+app.change('guestInvite','all');app.change('guestSort','name');assert.match(app.html(),/Võ D/);
+app.click('invite-group',{id:'g1'});assert.ok(JSON.parse(app.store['wedding-planner-local-v1']).guestGroups[0].guests.filter(x=>x.rsvp!=='no').every(x=>x.invited));
+app=boot(base());app.click('tab',{key:'guests'});assert.doesNotMatch(app.html(),/Cơ cấu xác nhận/);
 console.log('PASS: dựng giao diện ngày cưới trống, ngân sách có/không dữ liệu, tab khách mời');
