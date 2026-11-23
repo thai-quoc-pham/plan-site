@@ -5,6 +5,7 @@
 (() => {
 'use strict';
 const KEY='wedding-planner-local-v1', MIGRATION_KEY='wedding-planner-anonymous-sync-v1', CURRENT_VERSION=2;
+const Stats=window.WeddingStats,Charts=window.WeddingCharts;
 const $=(s,root=document)=>root.querySelector(s);
 const $$=(s,root=document)=>Array.from(root.querySelectorAll(s));
 const id=()=>('id-'+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)));
@@ -154,10 +155,10 @@ function todoTemplate(d,includeExtended=false){
  ];
  return (includeExtended?[...reference,...rows]:reference).map(([category,title,days,priority,assignee,notes])=>({id:id(),title,category,priority,due:d?incDate(d,-days):'',assignee,status:'open',notes,origin:includeExtended&&rows.some(r=>r[1]===title)?'extra':'reference'}));
 }
-const defaultState=()=>{const meta={bride:'Dâu',groom:'Rể',weddingDate:'',venue:'',tableSize:10};return{version:CURRENT_VERSION,meta,schedule:scheduleTemplate(meta.weddingDate),todos:todoTemplate(meta.weddingDate),budget:[],guestGroups:initialGroups.map(name=>({id:id(),name,guests:[]}))}};
+const defaultState=()=>{const meta={bride:'Dâu',groom:'Rể',weddingDate:'',venue:'',tableSize:10,budgetTarget:''};return{version:CURRENT_VERSION,meta,schedule:scheduleTemplate(meta.weddingDate),todos:todoTemplate(meta.weddingDate),budget:[],guestGroups:initialGroups.map(name=>({id:id(),name,guests:[]}))}};
 function normalizeState(o){
  if(!o||typeof o!=='object')throw Error('Tệp dữ liệu không hợp lệ.');
- const meta={bride:'Dâu',groom:'Rể',weddingDate:'',venue:'',tableSize:10,...(o.meta||{})};
+ const meta={bride:'Dâu',groom:'Rể',weddingDate:'',venue:'',tableSize:10,budgetTarget:'',...(o.meta||{})};
  const isOld=(Number(o.version)||1)<2;
  const x={version:CURRENT_VERSION,meta,schedule:Array.isArray(o.schedule)?o.schedule:[],todos:Array.isArray(o.todos)?o.todos:[],budget:Array.isArray(o.budget)?o.budget:[],guestGroups:Array.isArray(o.guestGroups)?o.guestGroups:initialGroups.map(name=>({id:id(),name,guests:[]}))};
  if(isOld&&x.schedule.length===0)x.schedule=scheduleTemplate(meta.weddingDate);
@@ -170,7 +171,7 @@ function normalizeState(o){
 let state=(()=>{try{const v=localStorage.getItem(KEY);return v?normalizeState(JSON.parse(v)):defaultState()}catch(ex){return defaultState()}})();
 const hadLocalData=!!localStorage.getItem(KEY);
 let localChangedSinceBoot=false;
-let view={tab:'schedule',scheduleSearch:'',scheduleDate:'all',todoSearch:'',todoStatus:'all',todoCategory:'all',budgetSearch:'',budgetCategory:'all',guestSearch:'',guestStatus:'all',guestMode:'list',menu:false};
+let view={tab:'schedule',scheduleSearch:'',scheduleDate:'all',todoSearch:'',todoStatus:'all',todoCategory:'all',budgetSearch:'',budgetCategory:'all',budgetStatus:'all',budgetSort:'default',guestSearch:'',guestStatus:'all',guestMode:'list',menu:false};
 let modal=null;let toastTimer=null;
 let syncStatus='✓ Đã lưu trên máy';
 const setSyncStatus=(message,error=false)=>{syncStatus=message;$$('[data-sync-status]').forEach(el=>{el.textContent=message;el.title=error?message:'';el.classList.toggle('sync-error',error)})};
@@ -240,15 +241,36 @@ function renderTodos(){
  </div>`;
 }
 /* ---------------- Ngân sách ---------------- */
+function budgetInsights(bs){
+ const m=n=>miniMoney(n);
+ const target=bs.target?`<div class="big-figure">${e(currency(bs.projected))} <small>/ ${e(currency(bs.target))}</small></div>${Charts.progress(bs.projected,bs.target,{fmt:currency,label:'Mức dùng ngân sách mục tiêu'})}<p class="${bs.overTarget?'negative':'positive'}" style="margin:0;font-weight:700">${bs.overTarget?`Vượt mục tiêu ${e(currency(-bs.targetRemaining))} (${bs.targetUsedPct}%)`:`Đã dùng ${bs.targetUsedPct}% · còn ${e(currency(bs.targetRemaining))}`}</p>`
+  :`<p class="insight-sub">Chưa đặt tổng ngân sách mục tiêu. Đặt một con số để theo dõi mức đã dùng và nhận cảnh báo khi vượt.</p><div class="big-figure">${e(currency(bs.projected))} <small>dự kiến chi</small></div>`;
+ const stats=`<div class="mini-stats"><div>Bình quân mỗi khách<strong>${bs.perGuest==null?'—':e(currency(bs.perGuest))}</strong></div><div>Bình quân mỗi mâm<strong>${bs.perTable==null?'—':e(currency(bs.perTable))}</strong></div></div>`;
+ const card1=`<section class="panel sidebox"><h3>Ngân sách mục tiêu</h3><p class="insight-sub">Dự kiến chi = giá thực tế nếu đã chốt, chưa chốt thì lấy dự trù.</p>${target}${stats}<div class="stack" style="margin-top:14px">${btn(ico('edit')+(bs.target?' Đổi mục tiêu':' Đặt ngân sách mục tiêu'),'budget-target','btn small')}</div></section>`;
+ const donut=Charts.donut(bs.byCategory.map(c=>({label:c.cat,value:c.projected})),{fmt:m,centerValue:m(bs.projected),centerLabel:'dự kiến chi',ariaLabel:'Cơ cấu chi theo danh mục'});
+ const card2=`<section class="panel sidebox"><h3>Cơ cấu chi theo danh mục</h3><p class="insight-sub">Tỷ trọng từng danh mục trong tổng chi dự kiến.</p>${donut||'<p class="small-text">Nhập dự trù hoặc chi phí thực tế để xem biểu đồ.</p>'}${bs.uncosted?`<p class="small-text" style="margin-top:10px">${bs.uncosted} khoản chưa có giá nên chưa nằm trong biểu đồ.</p>`:''}</section>`;
+ const bars=Charts.bars(bs.byCategory.slice(0,8).map(c=>({label:c.cat,est:c.est,actual:c.actual})),{series:[{key:'est',label:'Dự trù'},{key:'actual',label:'Thực tế'}],fmt:m,ariaLabel:'So sánh dự trù và thực tế theo danh mục'});
+ const card3=`<section class="panel sidebox"><h3>Dự trù và thực tế</h3><p class="insight-sub">So sánh từng danh mục (tối đa 8 danh mục lớn nhất).</p>${bars||'<p class="small-text">Chưa có số liệu để so sánh.</p>'}</section>`;
+ const stateLabel={overdue:['red','Quá hạn'],soon:['orange','Sắp đến hạn'],later:['neutral','Sau này']};
+ const pay=bs.payments.slice(0,6).map(p=>`<li><span class="status ${stateLabel[p.state][0]}">${stateLabel[p.state][1]}</span><span class="pay-main"><strong>${e(p.name)}</strong><span class="fine">${e(dateVN(p.due))}${p.vendor?' · '+e(p.vendor):''}</span></span><span class="pay-amt">${e(currency(p.owed))}</span></li>`).join('');
+ const card4=`<section class="panel sidebox"><h3>Lịch thanh toán</h3><p class="insight-sub">${bs.overdueTotal?`<b class="negative">${e(currency(bs.overdueTotal))} đã quá hạn</b>`:'Không có khoản quá hạn'}${bs.soonTotal?` · ${e(currency(bs.soonTotal))} đến hạn trong 14 ngày`:''}.</p>${pay?`<ul class="pay-list">${pay}</ul>${bs.payments.length>6?`<p class="small-text">Và ${bs.payments.length-6} khoản khác.</p>`:''}`:'<p class="small-text">Chưa có khoản nào còn nợ kèm hạn thanh toán. Nhập “Hạn” khi thêm khoản chi để được nhắc.</p>'}</section>`;
+ return `<div class="insight-grid">${card1}${card4}${card2}${card3}</div>`;
+}
 function renderBudget(){
  const {est,actual,paid,pending,remain}=sumBudget(),arr=state.budget,q=view.budgetSearch.toLocaleLowerCase('vi');
- const filtered=arr.filter(x=>(view.budgetCategory==='all'||x.category===view.budgetCategory)&&(!q||[x.name,x.category,x.vendor,x.note].some(t=>String(t||'').toLocaleLowerCase('vi').includes(q))));
+ const payState=x=>{const hasA=x.actual!==''&&x.actual!=null,hasE=x.estimate!==''&&x.estimate!=null;return hasA&&x.actual>0&&Math.max(0,nonneg(x.actual)-nonneg(x.paid))===0?'paid':nonneg(x.paid)>0?'partial':hasA?'unpaid':hasE?'plan':'nocost'};
+ const sorters={default:null,'cost-desc':(a,b)=>Stats.cost(b)-Stats.cost(a),'cost-asc':(a,b)=>Stats.cost(a)-Stats.cost(b),due:(a,b)=>(a.due||'9999').localeCompare(b.due||'9999'),name:(a,b)=>String(a.name).localeCompare(String(b.name),'vi')};
+ const filtered=arr.filter(x=>(view.budgetCategory==='all'||x.category===view.budgetCategory)&&(view.budgetStatus==='all'||payState(x)===view.budgetStatus)&&(!q||[x.name,x.category,x.vendor,x.note].some(t=>String(t||'').toLocaleLowerCase('vi').includes(q))));
+ if(sorters[view.budgetSort])filtered.sort(sorters[view.budgetSort]);
  const cats=[...new Set(arr.map(x=>x.category))].filter(Boolean);
  const topCats=Object.entries(arr.reduce((a,x)=>{if(x.actual==null||String(x.actual).trim()==='')return a;const k=x.category||'Khác';a[k]=(a[k]||0)+nonneg(x.actual);return a},{})).sort((a,b)=>b[1]-a[1]);
  const hasEstimate=arr.some(x=>x.estimate!==''&&x.estimate!=null),hasActual=arr.some(x=>x.actual!==''&&x.actual!=null),hasPaid=arr.some(x=>x.paid!==''&&x.paid!=null);
+ const bs=Stats.budgetStats(arr,{target:nonneg(state.meta.budgetTarget),expectedGuests:metricsGuest().expected,tableSize:state.meta.tableSize,today:today()});
+ const insights=budgetInsights(bs);
  return `<div class="metrics">${metric('Tổng dự trù',hasEstimate?miniMoney(est):'—',hasEstimate?currency(est):'Chưa có số liệu','wallet',true)}${metric('Chi phí thực tế',hasActual?miniMoney(actual):'—',hasActual?currency(actual):'Chưa có số liệu','briefcase')}${metric('Đã thanh toán',hasPaid?miniMoney(paid):'—',hasPaid?currency(paid):'Chưa có số liệu','checkCircle')}${metric('Chưa thanh toán',hasActual?miniMoney(pending):'—',hasActual?currency(pending):'Chưa có số liệu','clock')}</div>
+ ${insights}
  <div class="two-col"><div><section class="panel"><div class="panel-head"><div><h2>Chi tiết ngân sách</h2><p>Quản lý chi phí dự kiến, phát sinh, số tiền đã trả và nhà cung cấp.</p></div>${btn(ico('plus')+' Thêm khoản chi','new-budget','btn primary small')}</div>
- <div class="panel-toolbar"><label class="search">${ico('search')}<input type="search" aria-label="Tìm khoản chi hoặc nhà cung cấp" data-filter="budgetSearch" value="${e(view.budgetSearch)}" placeholder="Tìm khoản chi hoặc nhà cung cấp..." /></label><select class="field xs" aria-label="Lọc danh mục ngân sách" data-filter="budgetCategory">${escOpt(cats.map(c=>[c,c]),view.budgetCategory,'Tất cả danh mục')}</select><div class="toolbar-space"></div>${btn(ico('copy')+' Mẫu ngân sách','seed-budget','btn small')}${btn(ico('arrowDown')+' Excel','export-budget-csv','btn small')}</div>
+ <div class="panel-toolbar"><label class="search">${ico('search')}<input type="search" aria-label="Tìm khoản chi hoặc nhà cung cấp" data-filter="budgetSearch" value="${e(view.budgetSearch)}" placeholder="Tìm khoản chi hoặc nhà cung cấp..." /></label><select class="field xs" aria-label="Lọc danh mục ngân sách" data-filter="budgetCategory">${escOpt(cats.map(c=>[c,c]),view.budgetCategory,'Tất cả danh mục')}</select><select class="field xs" aria-label="Lọc theo thanh toán" data-filter="budgetStatus">${escOpt([['paid','Đã thanh toán'],['partial','Trả một phần'],['unpaid','Chưa thanh toán'],['plan','Mới có dự trù'],['nocost','Chưa có giá']],view.budgetStatus,'Mọi trạng thái')}</select><select class="field xs" aria-label="Sắp xếp khoản chi" data-filter="budgetSort">${escOpt([['default','Thứ tự nhập'],['cost-desc','Chi phí giảm dần'],['cost-asc','Chi phí tăng dần'],['due','Hạn gần nhất'],['name','Tên A-Z']],view.budgetSort)}</select><div class="toolbar-space"></div>${btn(ico('copy')+' Mẫu ngân sách','seed-budget','btn small')}${btn(ico('arrowDown')+' Excel','export-budget-csv','btn small')}</div>
  ${filtered.length?`<div class="table-wrap"><table class="data-table budget-table"><thead><tr><th>Khoản chi</th><th>Dự trù</th><th>Thực tế</th><th>Đã trả</th><th>Trạng thái</th><th></th></tr></thead><tbody>${filtered.map(x=>{const remaining=Math.max(0,nonneg(x.actual)-nonneg(x.paid));const hasEstimate=x.estimate!==''&&x.estimate!=null,hasActual=x.actual!==''&&x.actual!=null;return `<tr><td><div class="title-cell">${e(x.name)}</div><span class="fine">${e(x.category||'Khác')}${x.vendor?' · '+e(x.vendor):''}</span></td><td class="money">${budgetMoney(x.estimate)}</td><td class="money bold">${budgetMoney(x.actual)}</td><td class="money">${budgetMoney(x.paid)}</td><td><span class="status ${hasActual&&x.actual>0&&remaining===0?'green':x.paid>0?'blue':'orange'}">${hasActual&&x.actual>0&&remaining===0?'Đã thanh toán':x.paid>0?'Trả một phần':hasActual?'Chưa thanh toán':hasEstimate?'Dự trù':'Chưa có giá'}</span></td><td><div class="table-actions">${btn(ico('edit'),'edit-budget','icon-btn small',`data-id="${e(x.id)}" aria-label="Sửa"`)}${btn(ico('trash'),'delete-budget','icon-btn small danger',`data-id="${e(x.id)}" aria-label="Xóa"`)}</div></td></tr>`}).join('')}</tbody><tfoot><tr style="background:#faf6f2;font-weight:800"><td style="padding:15px 17px">Tổng (${filtered.length} khoản)</td><td class="money">${filtered.some(x=>x.estimate!==''&&x.estimate!=null)?currency(filtered.reduce((s,x)=>s+nonneg(x.estimate),0)):'—'}</td><td class="money">${filtered.some(x=>x.actual!==''&&x.actual!=null)?currency(filtered.reduce((s,x)=>s+nonneg(x.actual),0)):'—'}</td><td class="money">${filtered.some(x=>x.paid!==''&&x.paid!=null)?currency(filtered.reduce((s,x)=>s+nonneg(x.paid),0)):'—'}</td><td></td><td></td></tr></tfoot></table></div>`:empty('wallet','Chưa có khoản chi nào','Bạn có thể tạo từng khoản hoặc sử dụng mẫu dự trù ngân sách cưới.','new-budget','Thêm khoản chi')}</section></div>
  <aside><section class="panel sidebox"><h3>Phân tích ngân sách</h3><div class="summary-bar"><span>Chênh lệch dự trù</span><strong class="${remain<0?'negative':'positive'}">${hasEstimate&&hasActual?(remain<0?'+':'')+currency(Math.abs(remain)):'—'}</strong></div><p class="small-text">${hasEstimate&&hasActual?(remain<0?'Chi phí thực tế đang vượt ngân sách dự trù.':'Số tiền dự trù chưa sử dụng.'):'Cần nhập dự trù và chi phí thực tế để tính chênh lệch.'}</p><div class="bar-chart"><span class="paid" style="width:${actual?Math.min(paid/Math.max(est,actual),1)*100:0}%"></span><span class="spent" style="width:${Math.max(0,Math.min(actual-paid,Math.max(est,actual)))/Math.max(est,actual,1)*100}%"></span></div><div class="stack"><span class="status green">● Đã trả</span><span class="status orange">● Chưa trả</span></div><div class="divider"></div><h3 style="margin-top:18px">Chi theo danh mục</h3>${topCats.length?topCats.slice(0,8).map(([cat,sum])=>`<div style="margin:13px 0"><div class="summary-bar"><span>${e(cat)}</span><strong>${miniMoney(sum)}</strong></div><div class="progress"><span style="width:${actual?sum/actual*100:0}%"></span></div></div>`).join(''):'<p class="small-text">Chưa có số liệu thực tế.</p>'}</section>
  <section class="panel sidebox"><h3>Lưu ý thanh toán</h3><p class="small-text">Nhập <b>thực tế</b> sau khi chốt giá với nhà cung cấp; nhập <b>đã trả</b> khi thanh toán. Hệ thống tự tính số còn nợ.</p><div class="notice compact">${ico('info')}Đơn vị mặc định: VND. Không có giao dịch tiền thật trong website này.</div></section></aside></div>`;
@@ -317,8 +339,13 @@ function openBulkGuests(){
 }
 function openSettings(){
  showModal('Cài đặt & dữ liệu','Mỗi thay đổi được lưu trên máy và tự ghi lên Google Sheets khi Apps Script đã triển khai.',
- inp('groom','Tên chú rể',state.meta.groom,'text')+inp('bride','Tên cô dâu',state.meta.bride,'text')+inp('weddingDate','Ngày cưới (để trống nếu chưa chọn)',state.meta.weddingDate,'date')+inp('tableSize','Số người mỗi mâm',state.meta.tableSize,'number',{min:1,step:1})+inp('venue','Địa điểm chính',state.meta.venue,'text',{wide:true})+`<div class="wide"><div class="notice">${ico('info')}${sheetStore.connected?'Đã tải Google Sheets. Mọi thay đổi trên web tự đồng bộ. Nếu sửa trực tiếp trên Sheet, hãy tải lại dữ liệu trước khi tiếp tục.':'Chưa tải được Google Sheets. Dữ liệu hiện chỉ lưu trên trình duyệt; kiểm tra URL Apps Script trong sheet-config.js và thử lại.'}</div><div class="stack" style="margin-top:12px">${btn(ico('undo')+' Thử đồng bộ lại','retry-sheet','btn small')}${btn(ico('arrowDown')+' Tải từ Sheets','reload-sheet','btn small')}${btn(ico('arrowUp')+' Ghi dữ liệu máy lên Sheets','upload-sheet','btn small')}${btn(ico('arrowUp')+' Khôi phục JSON','import-json','btn small')}${btn(ico('trash')+' Xóa tất cả dữ liệu','reset-data','btn small danger')}</div></div>`,
+ inp('groom','Tên chú rể',state.meta.groom,'text')+inp('bride','Tên cô dâu',state.meta.bride,'text')+inp('weddingDate','Ngày cưới (để trống nếu chưa chọn)',state.meta.weddingDate,'date')+inp('tableSize','Số người mỗi mâm',state.meta.tableSize,'number',{min:1,step:1})+inp('budgetTarget','Ngân sách mục tiêu (VND)',state.meta.budgetTarget,'number',{min:0,step:100000,placeholder:'VD: 300000000'})+inp('venue','Địa điểm chính',state.meta.venue,'text',{wide:true})+`<div class="wide"><div class="notice">${ico('info')}${sheetStore.connected?'Đã tải Google Sheets. Mọi thay đổi trên web tự đồng bộ. Nếu sửa trực tiếp trên Sheet, hãy tải lại dữ liệu trước khi tiếp tục.':'Chưa tải được Google Sheets. Dữ liệu hiện chỉ lưu trên trình duyệt; kiểm tra URL Apps Script trong sheet-config.js và thử lại.'}</div><div class="stack" style="margin-top:12px">${btn(ico('undo')+' Thử đồng bộ lại','retry-sheet','btn small')}${btn(ico('arrowDown')+' Tải từ Sheets','reload-sheet','btn small')}${btn(ico('arrowUp')+' Ghi dữ liệu máy lên Sheets','upload-sheet','btn small')}${btn(ico('arrowUp')+' Khôi phục JSON','import-json','btn small')}${btn(ico('trash')+' Xóa tất cả dữ liệu','reset-data','btn small danger')}</div></div>`,
  'settings','','', 'Lưu cài đặt');
+}
+function openBudgetTarget(){
+ showModal('Ngân sách mục tiêu','Tổng số tiền bạn dự định chi. Để trống nếu chưa muốn đặt mục tiêu.',
+ inp('budgetTarget','Tổng ngân sách mục tiêu (VND)',state.meta.budgetTarget,'number',{min:0,step:100000,wide:true,placeholder:'VD: 300000000'}),
+ 'budget-target','','','Lưu mục tiêu');
 }
 function openWeddingInfo(){
  showModal('Tên và ngày cưới','Chỉnh nhanh thông tin hiển thị trên toàn bộ website.',
@@ -374,9 +401,11 @@ async function submitForm(ev){
    state.guestGroups.push({id:id(),name:data.name.trim(),guests:[]});
   }else if(kind==='wedding-info'){
    applyWeddingInfo(data);
+  }else if(kind==='budget-target'){
+   const target=nonneg(data.budgetTarget);state.meta={...state.meta,budgetTarget:target?String(Math.round(target)):''};
   }else if(kind==='settings'){
    applyWeddingInfo(data);
-   state.meta={...state.meta,tableSize:Math.max(1,Math.floor(nonneg(data.tableSize)||10)),venue:data.venue};
+   const target=nonneg(data.budgetTarget);state.meta={...state.meta,tableSize:Math.max(1,Math.floor(nonneg(data.tableSize)||10)),venue:data.venue,budgetTarget:target?String(Math.round(target)):''};
   }else if(kind==='import-json'){
    const file=data.upload;if(!file)throw Error('Chưa chọn tệp JSON.');const obj=JSON.parse(await file.text());
    if(!window.confirm('Khôi phục sẽ thay thế toàn bộ dữ liệu hiện có. Bạn chắc chắn muốn tiếp tục?'))return;
@@ -564,6 +593,7 @@ function handleAction(act,el){
   case 'reload-sheet':reloadSheet();break;
   case 'upload-sheet':uploadSheet();break;
   case 'settings':openSettings();break;
+  case 'budget-target':openBudgetTarget();break;
   case 'close-modal':closeModal();break;
   case 'new-schedule':openSchedule();break;
   case 'edit-schedule':openSchedule(targetId);break;

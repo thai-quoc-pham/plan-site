@@ -235,3 +235,51 @@ button,input,select,textarea{font:inherit}
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
+
+/* Thống kê và biểu đồ (ngân sách, khách mời) */
+:root{--chart-1:#8b4e43;--chart-2:#416c90;--chart-3:#39755f;--chart-4:#a9822f;--chart-5:#78689a;--chart-6:#4a8587;--chart-7:#b0602e;--chart-8:#80776f}
+.insight-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:16px;margin-bottom:20px}
+.insight-grid>*{min-width:0}
+.insight-grid .sidebox{margin:0}
+.insight-grid h3{margin:0 0 4px}
+.insight-sub{margin:0 0 14px;color:var(--sub);font-size:13px}
+.big-figure{font-size:24px;font-weight:800;line-height:1.2;letter-spacing:-.3px}
+.big-figure small{font-size:13px;font-weight:600;color:var(--sub);letter-spacing:0}
+.mini-stats{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:14px}
+.mini-stats div{font-size:12px;color:var(--sub)}.mini-stats strong{display:block;font-size:15px;color:var(--text)}
+.chart-progress{height:12px;border-radius:99px;background:var(--surface-alt);border:1px solid var(--line);overflow:hidden;margin:12px 0 8px}
+.chart-progress span{display:block;height:100%;background:var(--green);border-radius:99px}
+.chart-progress.over span{background:var(--red)}
+.donut-wrap{display:flex;flex-wrap:wrap;align-items:center;gap:16px}
+.donut{width:150px;height:150px;flex:0 0 150px;transform:rotate(0deg)}
+.donut-seg{transform-origin:21px 21px}
+.donut-value{font-size:5.4px;font-weight:800;fill:var(--text)}
+.donut-label{font-size:2.8px;fill:var(--sub)}
+.chart-legend{list-style:none;margin:0;padding:0;flex:1 1 150px;min-width:0}
+.chart-legend li{display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0;min-width:0}
+.chart-legend.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-top:10px}
+.legend-dot{width:11px;height:11px;border-radius:3px;flex:0 0 11px;display:inline-block}
+.legend-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.legend-val{color:var(--sub);white-space:nowrap;font-variant-numeric:tabular-nums}
+.hbars{display:grid;gap:12px}
+.chart-legend-inline{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--sub)}
+.legend-item{display:inline-flex;align-items:center;gap:6px}
+.hbar-row{display:grid;grid-template-columns:minmax(80px,28%) 1fr;gap:10px;align-items:center}
+.hbar-name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar-tracks{display:grid;gap:4px}
+.hbar-line{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.hbar-track{height:10px;border-radius:99px;background:var(--surface-alt);overflow:hidden}
+.hbar-fill{display:block;height:100%;border-radius:99px;min-width:2px}
+.hbar-fill.s0,.legend-dot.s0{background:var(--chart-2)}.hbar-fill.s1,.legend-dot.s1{background:var(--chart-1)}.hbar-fill.s2,.legend-dot.s2{background:var(--chart-3)}
+.hbar-val{font-size:12px;color:var(--sub);min-width:54px;text-align:right;font-variant-numeric:tabular-nums}
+.stackbar{display:flex;height:16px;border-radius:99px;overflow:hidden;background:var(--surface-alt);border:1px solid var(--line)}
+.stackbar span{display:block;height:100%}
+.pay-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.pay-list li{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;font-size:13px;padding:8px 0;border-bottom:1px solid var(--line)}
+.pay-list li:last-child{border-bottom:0}
+.pay-list .pay-main{min-width:0}.pay-list .pay-main strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pay-list .pay-amt{font-variant-numeric:tabular-nums;font-weight:700}
+.warn-list{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px;font-size:13px}
+.warn-list li{padding:8px 10px;border-radius:10px;background:var(--orange-bg);color:#6b3d1c}
+.warn-list li.bad{background:var(--red-bg);color:#6e2a2a}
+@media(max-width:600px){.donut{width:128px;height:128px;flex-basis:128px}.hbar-row{grid-template-columns:1fr}}
