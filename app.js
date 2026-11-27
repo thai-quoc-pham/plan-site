@@ -524,9 +524,7 @@ async function startSheet(){
   if(!sheetStore.key()){setSyncStatus('Chưa đồng bộ · hãy mở link riêng có mật khẩu',true);return}
   const remote=await sheetStore.connect(state);
   if(localStorage.getItem(MIGRATION_KEY)&&sheetStore.dirty.size){
-   const matrices=SheetSchema.matrixFor(remote),localRows=SheetSchema.rowsFor(state);
-   for(const name of sheetStore.dirty)matrices[name]=[SheetSchema.columns[name],...localRows[name]];
-   state=normalizeState(SheetSchema.parse(matrices,remote));view.scheduleDate=state.meta.weddingDate||'all';update(false);
+   state=normalizeState(SheetSchema.mergeLocal(remote,state,[...sheetStore.dirty]));view.scheduleDate=state.meta.weddingDate||'all';update(false);
    await sheetStore.flush();return;
   }
   const differs=SheetSchema.names.some(name=>JSON.stringify(SheetSchema.rowsFor(state)[name])!==JSON.stringify(SheetSchema.rowsFor(remote)[name]));

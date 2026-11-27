@@ -12,20 +12,21 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&display=swap" />
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css?v=20261127" />
 </head>
 
 <body>
   <div id="app" aria-live="polite"></div>
   <div id="modal-root"></div>
   <div id="toast-root" aria-live="polite"></div>
-  <script defer src="./sheet-config.js"></script>
-  <script defer src="./sheet-schema.js"></script>
-  <script defer src="./sheet-sync.js"></script>
-  <script defer src="./stats.js"></script>
-  <script defer src="./charts.js"></script>
-  <script defer src="./xlsx.js"></script>
-  <script defer src="./app.js"></script>
+  <!-- Đổi ?v= ở mọi file khi phát hành để trình duyệt không trộn file mới với file cũ trong cache. -->
+  <script defer src="./sheet-config.js?v=20261127"></script>
+  <script defer src="./sheet-schema.js?v=20261127"></script>
+  <script defer src="./sheet-sync.js?v=20261127"></script>
+  <script defer src="./stats.js?v=20261127"></script>
+  <script defer src="./charts.js?v=20261127"></script>
+  <script defer src="./xlsx.js?v=20261127"></script>
+  <script defer src="./app.js?v=20261127"></script>
 </body>
 
 </html>

@@ -21,4 +21,11 @@ assert.equal(schema.parse(schema.matrixFor(noDate),state).meta.weddingDate,'');
 const isoMatrix=schema.matrixFor(state);const wd=isoMatrix['Cài đặt'].find(r=>r[1]==='weddingDate');wd[2]='2027-03-16T05:00:00.000Z';
 isoMatrix['Công việc'][1][5]='2027-01-02T05:00:00.000Z';
 const fromIso=schema.parse(isoMatrix,state);assert.equal(fromIso.meta.weddingDate,'2027-03-16');assert.equal(fromIso.todos[0].due,'2027-01-02');
+// Gộp tab chưa đồng bộ trên máy vào dữ liệu Sheet khi tải trang: giữ nguyên ID, không bị lệch cột STT.
+const remote=JSON.parse(JSON.stringify(state));remote.todos=[];
+const local=JSON.parse(JSON.stringify(state));local.todos=[...local.todos,{id:'t-moi',title:'',category:'Hậu cần',priority:'normal',due:'',assignee:'',status:'open',notes:'Chưa đặt tên',origin:''}];
+const merged=schema.mergeLocal(remote,local,['Công việc']);
+assert.deepEqual(merged.todos.map(x=>x.id),local.todos.map(x=>x.id));
+assert.deepEqual(JSON.parse(JSON.stringify(merged.todos)),local.todos);
+assert.deepEqual(merged.schedule,remote.schedule);
 console.log('PASS: roundtrip, thêm/sửa dữ liệu của 5 phần và checklist');
