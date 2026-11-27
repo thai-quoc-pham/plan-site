@@ -70,4 +70,4 @@ Mã Apps Script cố định ID Sheet, chỉ cho phép bảy tab, kiểm tra c�
 
 Chạy `npm test` (hoặc từng tệp trong `tests/` bằng `node`) để kiểm tra mã không cần tài khoản Google. `tests/render-test.cjs` dựng giao diện với DOM giả để bắt lỗi hiển thị, nhưng không thay thế việc thử trên trình duyệt thật. Kiểm thử thật với Google Sheets chỉ thực hiện được sau khi bạn triển khai Apps Script và điền URL `/exec`.
 
-Trong **Cài đặt**, bạn có thể xuất/khôi phục JSON và đặt lại dữ liệu. Các mục vẫn hỗ trợ xuất Excel/CSV; khách mời hỗ trợ nhập Excel/CSV. Khi sửa trực tiếp trong Sheet, giữ nguyên hàng tiêu đề và cột ID; ngày dùng `YYYY-MM-DD`, giờ `HH:MM`.
+Trong **Cài đặt**, bạn có thể xuất/khôi phục JSON và đặt lại dữ liệu. Các mục vẫn hỗ trợ xuất Excel/CSV; khách mời hỗ trợ nhập Excel/CSV. Khi sửa trực tiếp trong Sheet, giữ nguyên hàng tiêu đề và cột ID; ngày dùng `YYYY-MM-DD`, giờ `HH:MM`. Apps Script ghi các cột chữ ở định dạng văn bản để giữ số 0 đầu của số điện thoại; nếu một số đã mất số 0 từ trước, hãy sửa lại một lần trên web.

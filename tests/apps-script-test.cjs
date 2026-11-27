@@ -10,11 +10,13 @@ const sheets=Object.fromEntries(schema.names.map(name=>[name,{
   getLastRow(){return data[name].length},
   getMaxRows(){return this.maxRows},
   insertRowsAfter(_,count){this.maxRows+=count},
-  getRange(row,col,height,width){return{
+  formats:{},
+  getRange(row,col,height=1,width=1){const sheet=this;return{
+    setNumberFormat(format){for(let i=row;i<row+height;i++)for(let j=col;j<col+width;j++)sheet.formats[i+','+j]=format;return this},
     getValues(){return Array.from({length:height},(_,i)=>Array.from({length:width},(_,j)=>data[name][row-1+i]?.[col-1+j]??''))},
     clearContent(){for(let i=row-1;i<row-1+height;i++){data[name][i]??=[];for(let j=col-1;j<col-1+width;j++)data[name][i][j]=''}return this},
     insertCheckboxes(){return this},
-    setValues(rows){for(let i=0;i<rows.length;i++){data[name][row-1+i]??=[];for(let j=0;j<rows[i].length;j++)data[name][row-1+i][col-1+j]=rows[i][j];if(col===2&&data[name][0][0]==='STT')data[name][row-1+i][0]=row-1+i}return this},
+    setValues(rows){for(let i=0;i<rows.length;i++){data[name][row-1+i]??=[];for(let j=0;j<rows[i].length;j++){const v=rows[i][j];data[name][row-1+i][col-1+j]=typeof v==='string'&&/^\d+$/.test(v)&&sheet.formats[(row+i)+','+(col+j)]!=='@'?Number(v):v}if(col===2&&data[name][0][0]==='STT')data[name][row-1+i][0]=row-1+i}return this},
     setFormulas(rows){for(let i=0;i<rows.length;i++){data[name][row-1+i]??=[];data[name][row-1+i][col-1]=rows[i][0]}return this}
   }}
 }]));
@@ -59,4 +61,15 @@ assert.equal(JSON.parse(context.doGet({parameter:{}}).content).ok,false);
 const badPost=JSON.parse(context.doPost({postData:{contents:JSON.stringify({key:'sai',changes:{'Công việc':[todo]},expected:{}})}}).content);
 assert.equal(badPost.ok,false);assert.match(badPost.error,/^AUTH:/);
 props.pw='';assert.equal(get().ok,false);props.pw='mat-khau-test';
+const cur=get();
+const guest=['p1','g1','0123','0901234567',2,'yes',0,'05',false,'007'];
+result=post({changes:{'Khách mời':[guest]},expected:{'Khách mời':cur.revisions['Khách mời']}});assert.equal(result.ok,true);
+const saved=get().matrices['Khách mời'][1];
+assert.strictEqual(saved[4],'0901234567','số điện thoại phải giữ số 0 đầu');
+assert.strictEqual(saved[3],'0123');assert.strictEqual(saved[8],'05');assert.strictEqual(saved[10],'007');
+assert.strictEqual(saved[5],2);assert.strictEqual(saved[7],0);assert.strictEqual(saved[9],false);   // cột số và hộp kiểm giữ nguyên kiểu
+assert.equal(sheets['Khách mời'].formats['2,6'],undefined);   // không ép định dạng cột số
+const money=get();
+result=post({changes:{'Ngân sách':[['b1','0001','Khác',1000,'','',  '0123','','']]},expected:{'Ngân sách':money.revisions['Ngân sách']}});assert.equal(result.ok,true);
+const savedMoney=get().matrices['Ngân sách'].at(-1);assert.ok(savedMoney.includes(1000));assert.ok(savedMoney.includes('0123'));
 console.log('PASS: Apps Script đọc/ghi cấu trúc cũ và mới, giữ STT, chặn xung đột và công thức');
