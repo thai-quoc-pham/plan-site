@@ -155,6 +155,10 @@ a { color: var(--blue-ink); }
 .icon-btn.danger { color: var(--red-ink); }
 .icon-btn.danger:hover { background: var(--red-100); border-color: var(--red-500); }
 .icon-btn[aria-pressed='true'] { background: var(--mint-100); color: var(--mint-ink); border-color: #c6dcb0; }
+.icon-btn.can-do { color: var(--mint-ink); }
+.icon-btn.can-do:hover { background: var(--mint-100); border-color: var(--mint-500); }
+.icon-btn.is-done { background: var(--butter-100); border-color: var(--butter-500); color: var(--butter-ink); }
+.icon-btn.is-done:hover { background: var(--butter-100); border-color: var(--butter-ink); }
 .quick-profile { width: auto; padding: 0 14px; }
 
 .field, .search input, select.field, textarea.field { width: 100%; min-height: 42px; padding: 8px 12px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); font-size: 14px; transition: border-color var(--ease), box-shadow var(--ease); }
@@ -276,6 +280,7 @@ a { color: var(--blue-ink); }
 .checklist-done { text-decoration: line-through; color: var(--faint); }
 
 .todo-table { min-width: 750px; }
+.todo-table .status { white-space: nowrap; }
 .todo-table td, .todo-table th { vertical-align: top; }
 .todo-title-wrap { display: flex; align-items: flex-start; gap: 12px; }
 .todo-title { margin-bottom: 3px; font-size: 15px; font-weight: 800; line-height: 1.45; overflow-wrap: anywhere; }

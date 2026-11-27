@@ -67,4 +67,17 @@ assert.doesNotMatch(list,/Trần B/);assert.doesNotMatch(list,/Lê C/);assert.ma
 app.change('guestInvite','all');app.change('guestSort','name');assert.match(app.html(),/Võ D/);
 app.click('invite-group',{id:'g1'});assert.ok(JSON.parse(app.store['wedding-planner-local-v1']).guestGroups[0].guests.filter(x=>x.rsvp!=='no').every(x=>x.invited));
 app=boot(base());app.click('tab',{key:'guests'});assert.doesNotMatch(app.html(),/Cơ cấu xác nhận/);
-console.log('PASS: dựng giao diện ngày cưới trống, ngân sách có/không dữ liệu, tab khách mời');
+// 4) To-do: nút hoàn thành / hoàn tác thay cho nhân bản
+const tst=base();tst.todos=[{id:'t1',title:'Việc một',category:'Khác',priority:'normal',due:'',assignee:'',status:'doing',notes:''}];
+app=boot(tst);app.click('tab',{key:'todo'});h=app.html();
+assert.doesNotMatch(h,/duplicate-todo|Nhân bản/);
+assert.match(h,/data-action="complete-todo" data-id="t1"[^>]*aria-label="Đánh dấu hoàn thành: Việc một"/);
+const savedTodos=()=>JSON.parse(app.store['wedding-planner-local-v1']).todos;
+app.click('complete-todo',{id:'t1'});h=app.html();
+assert.equal(savedTodos()[0].status,'done');assert.equal(savedTodos().length,1);
+assert.match(h,/class="icon-btn small is-done" data-action="complete-todo"/);
+assert.match(h,/aria-label="Chuyển về chưa hoàn thành: Việc một"/);assert.match(h,/todo-completed/);
+app.click('complete-todo',{id:'t1'});h=app.html();
+assert.equal(savedTodos()[0].status,'open');assert.match(h,/aria-label="Đánh dấu hoàn thành: Việc một"/);assert.doesNotMatch(h,/is-done|todo-completed/);
+
+console.log('PASS: dựng giao diện ngày cưới trống, ngân sách, khách mời, nút hoàn thành To-do');
