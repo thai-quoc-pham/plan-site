@@ -64,5 +64,11 @@
     const budget = body('Ngân sách').map(r => ({id:str(r[0]), name:str(r[1]), category:str(r[2]), estimate:optionalMoney(r[3]), actual:optionalMoney(r[4]), paid:optionalMoney(r[5]), vendor:str(r[6]), due:day(r[7]), note:str(r[8])}));
     return {version:2, meta, schedule, todos, budget, guestGroups};
   }
-  return {columns, dataColumns, names, rowsFor, matrixFor, parse};
+  // Thay các tab chưa đồng bộ bằng dữ liệu trên máy; dùng matrixFor để có cột STT, nếu không ID sẽ bị cắt mất.
+  function mergeLocal(remote, local, localNames) {
+    const matrices = matrixFor(remote), localMatrices = matrixFor(local);
+    for (const name of localNames) matrices[name] = localMatrices[name];
+    return parse(matrices, remote);
+  }
+  return {columns, dataColumns, names, rowsFor, matrixFor, parse, mergeLocal};
 });

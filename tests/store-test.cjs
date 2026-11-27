@@ -49,5 +49,41 @@ store.postChanges=async(changes,expected)=>{
   assert.equal(remote.todos[0].title,'Sửa trên web');
   assert.equal(store.pending.size,0);
   assert.equal(new root.SheetStore(()=>{},()=>local).pending.size,0);
-  console.log('PASS: mật khẩu từ link riêng; tự ghi hai tab, giữ thay đổi lỗi qua tải lại trang, phát hiện xung đột');
+  // Bấm tiếp trong lúc đang đồng bộ: không được báo xung đột giả
+  const basePost=store.postChanges,baseSnapshot=store.snapshot;
+  const task=()=>({id:'t1',title:'Việc thử',category:'Khác',priority:'normal',due:'',assignee:'',status:'open',notes:''});
+  local.todos=[task()];await store.overwrite(local);
+  const lastNotice=()=>notices.at(-1);
+  const run=async()=>{clearTimeout(store.timer);await store.flush();clearTimeout(store.timer)};
+  store.postChanges=async(changes,expected)=>{await basePost(changes,expected);local.todos[0].status='done';store.queue(['Công việc']);clearTimeout(store.timer)};
+  local.todos[0].status='doing';store.queue(['Công việc']);await run();
+  assert.equal(lastNotice()[1],false,'bấm tiếp khi đang đồng bộ không phải là lỗi: '+lastNotice()[0]);
+  assert.equal(remote.todos[0].status,'doing');assert.equal(store.pending.has('Công việc'),true);
+  store.postChanges=basePost;await run();
+  assert.equal(remote.todos[0].status,'done');assert.equal(store.pending.size,0);assert.equal(store.dirty.size,0);
+
+  // Đã ghi được nhưng đọc lại thất bại (mạng chập chờn): lần sau tự nhận ra dữ liệu của chính mình
+  let failNext=false;
+  store.postChanges=async(changes,expected)=>{await basePost(changes,expected);failNext=true};
+  store.snapshot=async state=>{if(failNext){failNext=false;throw Error('Hết thời gian chờ Apps Script.')}return baseSnapshot(state)};
+  local.todos[0].status='open';store.queue(['Công việc']);await run();
+  assert.equal(lastNotice()[1],true);assert.equal(remote.todos[0].status,'open');
+  store.postChanges=basePost;local.todos[0].status='doing';store.queue(['Công việc']);await run();
+  assert.equal(lastNotice()[1],false,lastNotice()[0]);assert.equal(remote.todos[0].status,'doing');
+
+  // Tải lại trang sau lần đọc lại thất bại cũng phải tự phục hồi
+  store.postChanges=async(changes,expected)=>{await basePost(changes,expected);failNext=true};
+  local.todos[0].status='done';store.queue(['Công việc']);await run();
+  store.postChanges=basePost;
+  const again=new root.SheetStore((m,e)=>notices.push([m,e]),()=>local);
+  again.snapshot=baseSnapshot;again.postChanges=basePost;
+  local.todos[0].status='open';await again.connect(local);await again.flush();clearTimeout(again.timer);
+  assert.equal(lastNotice()[1],false,lastNotice()[0]);assert.equal(remote.todos[0].status,'open');
+
+  // Người khác sửa thật trên Sheet vẫn phải báo xung đột, và không ghi đè
+  store.snapshot=baseSnapshot;await store.connect(local);store.pending.clear();store.dirty.clear();store.error='';
+  remote.todos[0].title='Người khác sửa';local.todos[0].status='doing';store.queue(['Công việc']);await run();
+  assert.match(lastNotice()[0],/đã thay đổi/);assert.match(lastNotice()[0],/Tải từ Sheet/);assert.equal(remote.todos[0].title,'Người khác sửa');
+
+  console.log('PASS: không xung đột giả khi bấm liên tục hoặc mất mạng; mật khẩu từ link riêng; tự ghi hai tab, giữ thay đổi lỗi qua tải lại trang, phát hiện xung đột');
 })().catch(error=>{console.error(error);process.exitCode=1});

@@ -16,6 +16,8 @@
   const NAMES = Object.keys(COLUMNS);
 const HEADERS = Object.fromEntries(NAMES.map(name => [name, ['STT'].concat(COLUMNS[name])]));
   const BOOLEAN_COLS = {'Lịch trình':11,'Checklist':4,'Khách mời':9};
+  // Mọi cột khác được ghi dạng văn bản, để Sheets không đổi "0901234567" thành 901234567 hay tự đổi chuỗi ngày.
+  const NUMBER_COLS = {'Nhóm khách':[3],'Khách mời':[5,7],'Ngân sách':[4,5,6]};
 
   // Mật khẩu nằm trong Project Settings → Script Properties, khóa WEB_PASSWORD (không nằm trong mã).
   function authorize_(key) {
@@ -152,7 +154,13 @@ function dataRows_(matrix) {
         if (BOOLEAN_COLS[name] && rows.length > oldRows) {
           sheet.getRange(oldRows + 2, BOOLEAN_COLS[name] + (serial ? 1 : 0), rows.length - oldRows, 1).insertCheckboxes();
         }
-        if (rows.length) sheet.getRange(2, firstDataColumn, rows.length, width).setValues(rows);
+        if (rows.length) {
+          for (let column = 1; column <= width; column++) {
+            if (column === BOOLEAN_COLS[name] || (NUMBER_COLS[name] || []).includes(column)) continue;
+            sheet.getRange(2, firstDataColumn + column - 1, rows.length, 1).setNumberFormat('@');
+          }
+          sheet.getRange(2, firstDataColumn, rows.length, width).setValues(rows);
+        }
       });
       SpreadsheetApp.flush();
       return output_({ok:true});

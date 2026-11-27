@@ -11,11 +11,15 @@
       this.onStatus=onStatus;this.getState=getState;this.connected=false;
       let saved={};try{saved=JSON.parse(root.localStorage?.getItem(QUEUE_KEY)||'{}')||{}}catch{}
       this.revisions=saved.revisions||{};this.baseline={};
+      this.sent=saved.sent||{}; // nội dung đã gửi nhưng chưa đọc lại xác nhận được
       this.pending=new Set((saved.pending||[]).filter(name=>schema.names.includes(name)));
       this.dirty=new Set(this.pending);this.busy=false;this.timer=null;this.error='';
     }
     status(message,error=false){this.error=error?message:'';this.onStatus(message,error)}
-    saveQueue(){try{root.localStorage?.setItem(QUEUE_KEY,JSON.stringify({pending:[...this.dirty],revisions:this.revisions}))}catch{}}
+    saveQueue(){
+      for(const name of Object.keys(this.sent))if(!this.dirty.has(name))delete this.sent[name];
+      try{root.localStorage?.setItem(QUEUE_KEY,JSON.stringify({pending:[...this.dirty],revisions:this.revisions,sent:this.sent}))}catch{}
+    }
     key(){try{return root.localStorage?.getItem(PASS_KEY)||''}catch{return ''}}
     setKey(value){try{value?root.localStorage?.setItem(PASS_KEY,value):root.localStorage?.removeItem(PASS_KEY)}catch{}}
     // Link riêng dạng https://.../#k=MẬT_KHẨU: lưu vào trình duyệt, phần sau # không gửi lên máy chủ.
@@ -74,39 +78,58 @@
       // Apps Script ContentService không trả CORS; xác nhận bằng lần đọc độc lập ngay sau POST.
       if(response.type!=='opaque'&&!response.ok)throw Error('Không gửi được dữ liệu tới Apps Script.');
     }
+    // Dữ liệu trên trang đổi ngay trong lúc đang đồng bộ, nên mọi so sánh phải dùng bản chụp (chuỗi) tại lúc gửi.
+    snapshotRows(state,names){const all=schema.rowsFor(state);return {all,text:Object.fromEntries(names.map(name=>[name,JSON.stringify(all[name])]))}}
+    confirm(after,text,names){for(const name of names)if(fingerprint(after.state,name)!==text[name])throw Error(`Chưa xác nhận được dữ liệu ở tab ${name}. Kiểm tra Apps Script rồi thử đồng bộ lại.`)}
     async flush(){
       if(!this.connected||this.busy||!this.pending.size)return;
       this.busy=true;const names=[...this.pending];this.pending.clear();
-      const local=this.getState(),all=schema.rowsFor(local);
       try{
+        const local=this.getState(),{all,text}=this.snapshotRows(local,names);
         this.status('Đang đồng bộ Google Sheets…');
         const before=await this.snapshot(local);
-        const toWrite=names.filter(name=>fingerprint(before.state,name)!==fingerprint(local,name));
-        for(const name of toWrite)if(before.revisions[name]!==this.revisions[name])throw Error(`Tab ${name} đã thay đổi trên Google Sheets. Hãy tải lại trước khi sửa tiếp.`);
-        if(toWrite.length)await this.postChanges(Object.fromEntries(toWrite.map(name=>[name,all[name]])),Object.fromEntries(toWrite.map(name=>[name,this.revisions[name]])));
+        const toWrite=names.filter(name=>fingerprint(before.state,name)!==text[name]);
+        for(const name of toWrite){
+          // Khác phiên bản đã nhớ chỉ là xung đột khi nội dung trên Sheet không phải do chính trình duyệt này ghi.
+          if(before.revisions[name]!==this.revisions[name]&&fingerprint(before.state,name)!==this.sent[name])throw Error(`Tab ${name} đã thay đổi trên Google Sheets. Mở Cài đặt, chọn “Tải từ Sheets” để lấy dữ liệu trên Sheet, hoặc “Ghi dữ liệu máy lên Sheets” để giữ dữ liệu trên máy.`);
+        }
+        if(toWrite.length){
+          for(const name of toWrite){this.revisions[name]=before.revisions[name];this.sent[name]=text[name]}
+          this.saveQueue();
+          await this.postChanges(Object.fromEntries(toWrite.map(name=>[name,all[name]])),Object.fromEntries(toWrite.map(name=>[name,before.revisions[name]])));
+        }
         const after=toWrite.length?await this.snapshot(local):before;
-        for(const name of names)if(fingerprint(after.state,name)!==fingerprint(local,name))throw Error(`Chưa xác nhận được dữ liệu ở tab ${name}. Kiểm tra Apps Script rồi thử đồng bộ lại.`);
+        this.confirm(after,text,names);
         this.revisions=after.revisions;
         for(const name of names){
-          this.baseline[name]=fingerprint(local,name);
-          if(!this.pending.has(name)&&fingerprint(this.getState(),name)===fingerprint(local,name))this.dirty.delete(name);
+          this.baseline[name]=text[name];delete this.sent[name];
+          if(!this.pending.has(name)&&fingerprint(this.getState(),name)===text[name])this.dirty.delete(name);
+          else this.pending.add(name);
         }
         this.saveQueue();
-        this.status('✓ Đã đồng bộ Google Sheets');
+        this.status(this.pending.size?'Chưa đồng bộ lên Google Sheets':'✓ Đã đồng bộ Google Sheets');
       }catch(ex){for(const name of names)this.pending.add(name);this.saveQueue();this.status(ex.message||'Đồng bộ thất bại.',true)}
       finally{this.busy=false;if(this.pending.size&&!this.error){clearTimeout(this.timer);this.timer=setTimeout(()=>this.flush(),450)}}
     }
     async overwrite(state){
       if(!this.connected)throw Error('Chưa tải được Google Sheets.');
       if(this.busy)throw Error('Đang đồng bộ. Vui lòng thử lại sau.');
-      const all=schema.rowsFor(state);
-      const before=await this.snapshot(state);
-      await this.postChanges(all,before.revisions);
-      const after=await this.snapshot(state);
-      for(const name of schema.names)if(fingerprint(after.state,name)!==fingerprint(state,name))throw Error(`Chưa xác nhận được dữ liệu ở tab ${name}.`);
-      this.revisions=after.revisions;
-      this.baseline=Object.fromEntries(schema.names.map(name=>[name,fingerprint(state,name)]));
-      this.pending.clear();this.dirty.clear();this.saveQueue();this.status('✓ Đã ghi dữ liệu lên Google Sheets');
+      this.busy=true;clearTimeout(this.timer);
+      try{
+        const names=schema.names,{all,text}=this.snapshotRows(state,names);
+        const before=await this.snapshot(state);
+        for(const name of names){this.dirty.add(name);this.revisions[name]=before.revisions[name];this.sent[name]=text[name]}
+        this.saveQueue();
+        await this.postChanges(all,before.revisions);
+        const after=await this.snapshot(state);
+        this.confirm(after,text,names);
+        this.revisions=after.revisions;
+        this.baseline={...text};
+        this.pending.clear();this.dirty.clear();
+        for(const name of names)if(fingerprint(this.getState(),name)!==text[name]){this.pending.add(name);this.dirty.add(name)}
+        this.error='';this.saveQueue();
+        this.status(this.pending.size?'Chưa đồng bộ lên Google Sheets':'✓ Đã ghi dữ liệu lên Google Sheets');
+      }finally{this.busy=false;if(this.pending.size&&!this.error){clearTimeout(this.timer);this.timer=setTimeout(()=>this.flush(),450)}}
     }
   }
   root.SheetStore=SheetStore;
