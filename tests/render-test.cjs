@@ -80,4 +80,19 @@ assert.match(h,/aria-label="Chuyển về chưa hoàn thành: Việc một"/);as
 app.click('complete-todo',{id:'t1'});h=app.html();
 assert.equal(savedTodos()[0].status,'open');assert.match(h,/aria-label="Đánh dấu hoàn thành: Việc một"/);assert.doesNotMatch(h,/is-done|todo-completed/);
 
+// 5) To-do: nút Đang làm và thứ tự Đang làm / Hoàn thành / Sửa / Xóa
+const pst=base();pst.todos=[{id:'t1',title:'Việc một',category:'Khác',priority:'normal',due:'',assignee:'',status:'open',notes:''}];
+app=boot(pst);app.click('tab',{key:'todo'});
+const order=()=>[...app.html().matchAll(/data-action="(progress-todo|complete-todo|edit-todo|delete-todo)"/g)].map(m=>m[1]);
+const todo=()=>JSON.parse(app.store['wedding-planner-local-v1']).todos[0].status;
+assert.deepEqual(order(),['progress-todo','complete-todo','edit-todo','delete-todo']);
+assert.match(app.html(),/class="icon-btn small can-start" data-action="progress-todo" data-id="t1"[^>]*aria-label="Chuyển sang đang làm: Việc một"/);
+app.click('progress-todo',{id:'t1'});assert.equal(todo(),'doing');
+assert.match(app.html(),/class="icon-btn small is-doing" data-action="progress-todo"[^>]*aria-label="Tạm dừng, chuyển về chưa làm: Việc một"/);
+app.click('progress-todo',{id:'t1'});assert.equal(todo(),'open');
+app.click('progress-todo',{id:'t1'});app.click('complete-todo',{id:'t1'});assert.equal(todo(),'done');   // đang làm -> hoàn thành
+assert.match(app.html(),/class="icon-btn small can-start" data-action="progress-todo"/);
+app.click('progress-todo',{id:'t1'});assert.equal(todo(),'doing');                                       // đã xong -> làm lại
+assert.doesNotMatch(app.html(),/todo-completed/);
+
 console.log('PASS: dựng giao diện ngày cưới trống, ngân sách, khách mời, nút hoàn thành To-do');
